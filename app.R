@@ -16,11 +16,12 @@
 library(shiny)
 library(shinydashboard)
 #library(shinyFiles)
-library(shinyBS)
+#library(shinyBS)
 
 library(dygraphs)
 
 #imported from classElementR_R6.R
+#library(R6) #shiny depends
 #library(tseries)
 #library(xts)
 
