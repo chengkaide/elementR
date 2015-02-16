@@ -19,10 +19,15 @@ library(shinydashboard)
 library(shinyBS)
 
 library(dygraphs)
-library(datasets)
 
-library(tseries)
-library(xts)
+#imported from classElementR_R6.R
+#library(tseries)
+#library(xts)
+
+######################
+###### CLASSES IMPORTS
+######################
+source("classElementR_R6.R")
 
 
 ######################
@@ -38,20 +43,6 @@ if (skin == "") skin <- "blue"
 ######################
 ############ FUNCTIONS
 ######################
-
-
-getFolders <- function(d){dir(d)}
-
-getData <- function(p,header=T,sep=";",dec=","){cat("getData : ",p,sep="");t<-read.table(p,header=header,sep=sep,dec=dec);cat("exiting getData ...\n");t}
-
-
-######################
-######### DATA EXAMPLE
-######################
-
-nist1 <- read.csv("Data/example_1/calibration/NIST_1.csv",header=T,sep=";",dec=",")
-
-nist1.irts <- irts(nist1$Temps, as.matrix(nist1[,-c(1,4)]))
 
 
 
@@ -87,7 +78,15 @@ tags$head(
   tabItems(
 	##START
     tabItem("start",
-    # Solid backgrounds
+	fluidRow(
+		box(
+			title = list(icon("home"),"Welcome to element-R"),
+			width=12,
+			background = "light-blue",
+			#height=100,
+			h3(icon("flask"),"Choose to create a new project or load a existing one")
+		)#box
+	),#fluidRow
       fluidRow(
         box(
           title = list(icon("folder-o"),"New Project"),
@@ -95,18 +94,20 @@ tags$head(
           #background = "aqua",
 	  status="primary",
 	  solidHeader = TRUE,
-	  height=500,
-          h4("1. Choose the project folder"),
-	  selectInput("folderProjectIn", NULL ,  as.matrix(getFolders("Data")),multiple = FALSE),
-	  checkboxInput("projNameIsfolderName", "The project name is the folder name", TRUE)
+	  height=300,
+		h4("1. Choose the project folder"),
+		selectInput("folderProjectIn", NULL ,  as.matrix(dir("Data")),multiple = FALSE),
+		#checkboxInput("projNameIsfolderName", "The project name is the folder name", TRUE),
+		h4("2. Create the project"),
+		actionButton("createProjButton", "Create project !")
 	),#box
 	box(
           title = list(icon("folder"),"Load Project"),
           width = 6,
           #background = "green",
 	  solidHeader = TRUE,
-	  status="warning",
-	  height=500,
+	  status="primary",
+	  height=300,
           "the 'Load Project' Box"#,getwd()
         )
       )#fluidRow
@@ -164,67 +165,34 @@ ui <- dashboardPage(header, sidebar, body, skin = skin)
 
 server <- function(input, output) {
 
-  set.seed(122)
-  histdata <- rnorm(500)
-
-  output$plot1 <- renderPlot({
-    if (is.null(input$count) || is.null(input$fill))
-      return()
-
-    data <- histdata[seq(1, input$count)]
-    color <- input$fill
-    if (color == "none")
-      color <- NULL
-    hist(data, col = color, main = NULL)
-  })
-
-  output$scatter1 <- renderPlot({
-    spread <- as.numeric(input$spread) / 100
-    x <- rnorm(1000)
-    y <- x + rnorm(1000) * spread
-    plot(x, y, pch = ".", col = "blue")
-  })
-
-  output$scatter2 <- renderPlot({
-    spread <- as.numeric(input$spread) / 100
-    x <- rnorm(1000)
-    y <- x + rnorm(1000) * spread
-    plot(x, y, pch = ".", col = "red")
-  })
-
-output$progressBox <- renderValueBox({
-    valueBox(
-      paste0(25 + input$count2, "%"), "Progress", icon = icon("list"),
-      color = "purple"
-    )
-  })
-
-output$approvalBox <- renderValueBox({
-    valueBox(
-      "80%", "Approval", icon = icon("thumbs-up", lib = "glyphicon"),
-      color = "yellow"
-    )
-  })
-
 output$calibrationSelect <- renderUI({
-
-	fold <- input$folderProjectIn
-	files <- dir(paste("Data/",fold,"/calibration",sep=""))
+	if (is.null(currentProject())) return()
+	files <- currentProject()$calibrationsFiles
 	selectInput("calibrationIn", NULL ,  as.matrix(files),multiple = FALSE)
 
 })#output$calibrationSelect
 
 
-currentcalibrationIRTS <- reactive({
-	if (is.null(input$calibrationIn)) return()
-	fPath <- paste0("Data/",input$folderProjectIn,"/calibration/",input$calibrationIn)
-	f <- getData(fPath)
-	irts(f[,"Temps"], as.matrix(f[,-c(1,4)]))
+currentProject <- reactive({
+
+	input$createProjButton
+
+	if (input$createProjButton==0) return(NULL)
+
+	isolate({
+		input$createProjButton
+		cat("you pressed the button")
+		elementR_project$new(paste("Data/",input$folderProjectIn,sep=""))
+	})
+	
 })
 
-  output$dygraph <- renderDygraph({
+#currentProjectCreate()
 
-	#if (is.null(input$calibrationIn)) return()
+output$dygraph <- renderDygraph({
+
+	if (is.null(currentProject())) return()
+	if (is.null(input$calibrationIn)) return()
 
 	#cat(input$calibrationIn,"\n")
 	#fPath <- paste0("Data/",input$folderProjectIn,"/calibration/",input$calibrationIn)
@@ -232,26 +200,18 @@ currentcalibrationIRTS <- reactive({
 	#f <- getData(fPath)
 	#cat(names(f),"\n")
 	#f.irts <- getIRTS(f)
-	
 
-    dygraph(currentcalibrationIRTS(), main = "Observed CPS",height=500) %>%
-    dyLegend(show = "onmouseover", width = 400) %>%
-      #dySeries(c("lwr", "fit", "upr"), label = "Deaths") %>%
-      #dyOptions(drawGrid = input$showgrid) %>% 
-      dyRangeSelector(dateWindow = NULL, height = 80,
-       fillColor = "#1C93A6", strokeColor = "#ACC128", keepMouseZoom = TRUE)
-  })
-  
-  output$from <- renderText({
-    if (!is.null(input$dygraph_date_window))
-      strftime(input$dygraph_date_window[[1]], "%d %b %Y")      
-  })
-  
-  output$to <- renderText({
-    if (!is.null(input$dygraph_date_window))
-      strftime(input$dygraph_date_window[[2]], "%d %b %Y")
-  })
 
+	dygraph(currentProject()$calibrations[[input$calibrationIn]]$dataIRTS, main = "Observed CPS",height=500) %>%
+	dyLegend(show = "onmouseover", width = 400) %>%
+	#dySeries(c("lwr", "fit", "upr"), label = "Deaths") %>%
+	#dyOptions(drawGrid = input$showgrid) %>% 
+	dyRangeSelector(dateWindow = NULL, height = 80,
+	fillColor = "#1C93A6", strokeColor = "#ACC128", keepMouseZoom = TRUE)
+})
+
+
+  
 }#eo server
 
 
