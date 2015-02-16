@@ -15,8 +15,6 @@
 ######################
 library(shiny)
 library(shinydashboard)
-#library(shinyFiles)
-#library(shinyBS)
 
 library(dygraphs)
 
@@ -81,11 +79,11 @@ tags$head(
     tabItem("start",
 	fluidRow(
 		box(
-			title = list(icon("home"),"Welcome to element-R"),
+			#title = list(icon("home"),"Welcome to element-R"),
 			width=12,
 			background = "light-blue",
 			#height=100,
-			h3(icon("flask"),"Choose to create a new project or load a existing one")
+			h3(icon("flask"),"Choose to create a new project or load an existing one")
 		)#box
 	),#fluidRow
       fluidRow(
