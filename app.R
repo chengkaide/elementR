@@ -139,7 +139,7 @@ tags$head(
 	  solidHeader = TRUE,
           status = "success",
           width = 12,
-          dygraphOutput("dygraph"),
+          dygraphOutput("dygraph", height = 600),
           height = 1000
         )#box
 	)#column
