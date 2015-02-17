@@ -201,11 +201,11 @@ output$dygraph <- renderDygraph({
 	#f.irts <- getIRTS(f)
 
 
-	dygraph(currentProject()$calibrations[[input$calibrationIn]]$dataIRTS, main = "Observed CPS",height=400) %>%
+	dygraph(currentProject()$calibrations[[input$calibrationIn]]$dataIRTS, main = "Observed CPS",height=700) %>%
 	dyLegend(show = "onmouseover", width = 400) %>%
 	#dySeries(c("lwr", "fit", "upr"), label = "Deaths") %>%
 	#dyOptions(drawGrid = input$showgrid) %>% 
-	dyRangeSelector(dateWindow = NULL, height = 80,
+	dyRangeSelector(dateWindow = NULL, height = 120,
 	fillColor = "#1C93A6", strokeColor = "#ACC128", keepMouseZoom = TRUE)
 })
 
