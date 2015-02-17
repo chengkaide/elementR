@@ -205,7 +205,7 @@ output$dygraph <- renderDygraph({
 	dyLegend(show = "onmouseover", width = 400) %>%
 	#dySeries(c("lwr", "fit", "upr"), label = "Deaths") %>%
 	#dyOptions(drawGrid = input$showgrid) %>% 
-	dyRangeSelector(dateWindow = NULL, height = 80,
+	dyRangeSelector(dateWindow = NULL, height = 200,
 	fillColor = "#1C93A6", strokeColor = "#ACC128", keepMouseZoom = TRUE)
 })
 
