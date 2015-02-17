@@ -201,7 +201,7 @@ output$dygraph <- renderDygraph({
 	#f.irts <- getIRTS(f)
 
 
-	dygraph(currentProject()$calibrations[[input$calibrationIn]]$dataIRTS, main = "Observed CPS",height=500) %>%
+	dygraph(currentProject()$calibrations[[input$calibrationIn]]$dataIRTS, main = "Observed CPS",height=700) %>%
 	dyLegend(show = "onmouseover", width = 400) %>%
 	#dySeries(c("lwr", "fit", "upr"), label = "Deaths") %>%
 	#dyOptions(drawGrid = input$showgrid) %>% 
