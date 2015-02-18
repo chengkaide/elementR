@@ -182,7 +182,6 @@ currentProject <- reactive({
 		input$createProjButton
 		cat("you pressed the button")
 		elementR_project$new(paste("Data/",input$folderProjectIn,sep=""))
-		dir.create(paste(Data,"/Done"))
 	})
 	
 })
