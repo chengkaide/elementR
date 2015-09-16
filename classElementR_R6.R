@@ -62,9 +62,9 @@ elementR_data <- R6Class("elementR_data",
                              
                              vect <- vector()  
                              
-                             vect[which(self$data[,1] < bins[1] | self$data[,1] > bins[2])] <- "B"
+                             vect[which(self$data[,1] < bins)] <- "B"
                              
-                             vect[which(self$data[,1] > plat[1] & self$data[,1] < plat[2])] <- "P"
+                             vect[which(self$data[,1] >= plat[1] & self$data[,1] <= plat[2])] <- "P"
                              
                              vect[which(is.na(vect))] <- "R"
                              
@@ -100,9 +100,19 @@ elementR_data <- R6Class("elementR_data",
                              
                              self$setDataPlateau(bins, plat)
                              
-                             subDat <- self$dataplateau[,-1] - apply(self$dataBlanc[,-1], 2, mean, na.rm = T)
+                             tempo <- apply(self$dataBlanc[,-1], 2, mean, na.rm = T)
+                                                          
+                             subDat <- sapply(1:length(apply(self$dataBlanc[,-1], 2, mean, na.rm = T)),function(x){                              
+                               
+                               self$dataplateau[,x+1] - tempo[x]  
+                               
+                             })
+                                                          
+                             subDat <- cbind(as.matrix(self$dataplateau[,1]), subDat)
                              
-                             self$dataPlateauMoinsBlanc <- cbind(self$dataplateau[,1], subDat)
+                             colnames(subDat) <- colnames(self$dataplateau)
+                             
+                             self$dataPlateauMoinsBlanc <- subDat
                              
                            }, # setDataPlateauMoinsBlanc
                            
@@ -120,9 +130,13 @@ elementR_data <- R6Class("elementR_data",
                                                                                                             
                                                                                                             l
                                                                                                             
-                             }))
+                             })) 
                              
-                             self$dataPlateauMoinsBlancSupLOD <- cbind(self$dataPlateauMoinsBlanc[,1],subDat)
+                             subDat <- cbind(as.matrix(self$dataPlateauMoinsBlanc[,1]),subDat)
+                             
+                             colnames(subDat) <- colnames(self$dataPlateauMoinsBlanc)
+                             
+                             self$dataPlateauMoinsBlancSupLOD <- subDat
                              
                            }, # setDataPlateauMoinsBlancSupLOD
                            
@@ -132,11 +146,17 @@ elementR_data <- R6Class("elementR_data",
                              
                              self$setDataPlateauMoinsBlancSupLOD(bins, plat)
                              
-                             subDat <- self$dataPlateauMoinsBlancSupLOD[,-1]
+                             subDat <- sapply(2:ncol(self$dataPlateauMoinsBlancSupLOD),function(x){ 
+                               
+                               self$dataPlateauMoinsBlancSupLOD[,x]/self$dataPlateauMoinsBlancSupLOD[,grep("Ca",colnames(self$dataPlateauMoinsBlancSupLOD))]
+                               
+                             })
+                                                          
+                             subDat <- cbind(as.matrix(self$dataPlateauMoinsBlancSupLOD[,1]),subDat)                             
                              
-                             subDat <- subDat / subDat[,grep("Ca",names(subDat))]
+                             colnames(subDat) <- colnames(self$dataPlateauMoinsBlancSupLOD)
                              
-                             self$dataPlateauMoinsBlancSupLODNorm <- cbind(self$dataPlateauMoinsBlancSupLOD[,1],subDat)
+                             self$dataPlateauMoinsBlancSupLODNorm <- subDat
                              
                            },#setDataNorm
                            
@@ -144,11 +164,19 @@ elementR_data <- R6Class("elementR_data",
                            
                            setDataDesanomalise = function(bins, plat){
                              
+                             print("step4")
+                             
                              self$setDataNorm(bins, plat)
+                             
+                             print("step5")
                              
                              ValMax <- apply(self$dataPlateauMoinsBlancSupLODNorm[,-1], 2, function(k){mean(k, na.rm = T) + 2*sd(k,na.rm = T)})
                              
+                             print("step6")
+                             
                              ValMin <- apply(self$dataPlateauMoinsBlancSupLODNorm[,-1], 2, function(k){mean(k, na.rm = T) - 2*sd(k,na.rm = T)})
+                             
+                             print("step7")
                              
                              subDat <- do.call(rbind,lapply(1:dim(self$dataPlateauMoinsBlancSupLODNorm[,-1])[1], function(z){
                                
@@ -158,7 +186,9 @@ elementR_data <- R6Class("elementR_data",
                                
                              }))
                              
-                             self$dataPlateauMoinsBlancSupLODNormSansAnom <- cbind(self$dataPlateauMoinsBlancSupLODNorm[,1],subDat)
+                             print("step8")
+                             
+                             self$dataPlateauMoinsBlancSupLODNormSansAnom <- cbind(as.matrix(self$dataPlateauMoinsBlancSupLODNorm[,1]),subDat)
                              
                            }, #setDataDesanomalise
                            
@@ -188,8 +218,6 @@ elementR_data <- R6Class("elementR_data",
                              if(CourbeNIST =="Sans Anomalie") {self$setDataDesanomalise(bins, plat)
                                                                return(self$dataPlateauMoinsBlancSupLODNormSansAnom) } 
                            },
-                           
-
                            
                            greet = function() {
                              cat("###\n")
@@ -227,15 +255,13 @@ elementR_calibration <- R6Class("elementR_calibration",
                                   data_calibFinalSD = NA,
                                   type = "calibration",
                                   plat = c(NA,NA),
-                                  bins = c(NA,NA),
+                                  bins = NA,
                                   
                                   ##########################################################
                                   
                                   setdata_calibFinal = function(){
-                                    
                                     self$data_calibFinalMean <- apply(self$dataPlateauMoinsBlancSupLODNormSansAnom,2,mean, na.rm = T)[-1]  
                                     self$data_calibFinalSD <- apply(self$dataPlateauMoinsBlancSupLODNormSansAnom,2,sd, na.rm = T)[-1]
-                                    
                                   }, # setdata_calibFinal
                                   
                                   setBins = function(x){
@@ -281,7 +307,7 @@ elementR_sample <- R6Class("elementR_sample",
                              standard = NA,
                              dataPlateauMoinsBlancSupLODNormSansAnomConc = NA,
                              platSample = c(NA,NA),
-                             binsSample = c(NA,NA),
+                             binsSample = NA,
                              
                              setBins = function(x){
                                
@@ -297,19 +323,31 @@ elementR_sample <- R6Class("elementR_sample",
                              
                              setstandard = function(stand){
                                
-                               self$standard <- stand                               
+                               self$standard <- stand
                                                               
                              },                          
                          
                              ##########################################################
                              
-                             setDataDesanomaliseConc = function(bins, plat){
+                             setDataDesanomaliseConc = function(bins, plat, SimNist){
                                
-                               self$setDataDesanomalise(bins, plat)        
+                               print("step1")
+                               
+                               self$setDataDesanomalise(bins, plat)    
+                               
+                               print("step2")
                                                            
-                               temp <- sapply(2:ncol(self$dataPlateauMoinsBlancSupLODNormSansAnom), function(x){self$dataPlateauMoinsBlancSupLODNormSansAnom[,x] * self$standard[1,x-1]})
+                               temp <- sapply(2:ncol(self$dataPlateauMoinsBlancSupLODNormSansAnom), function(x){
+                                 
+                                 print(x)
+                                 
+                                 self$dataPlateauMoinsBlancSupLODNormSansAnom[,x] * self$standard[1,x-1]/ SimNist[x-1]
+                                 
+                                 })
                                
-                               self$dataPlateauMoinsBlancSupLODNormSansAnomConc <- cbind(self$dataPlateauMoinsBlancSupLODNormSansAnom[,1],temp)
+                               self$dataPlateauMoinsBlancSupLODNormSansAnomConc <- cbind(as.matrix(self$dataPlateauMoinsBlancSupLODNormSansAnom[,1]),temp)
+                               
+                               print("step3")
                                
                                colnames(self$dataPlateauMoinsBlancSupLODNormSansAnomConc) <- colnames(self$dataPlateauMoinsBlancSupLODNormSansAnom)
                                
@@ -317,7 +355,7 @@ elementR_sample <- R6Class("elementR_sample",
                              
                              ##########################################################
                              
-                             getData = function(CourbeNIST, bins, plat){
+                             getData = function(CourbeNIST, bins, plat, SimNist){
                               
                                if(CourbeNIST =="Blanc") {self$setDataBlanc(bins, plat)
                                                          return(self$dataBlanc)}
@@ -326,20 +364,20 @@ elementR_sample <- R6Class("elementR_sample",
                                
                                if(CourbeNIST =="Plateau") {self$setDataPlateau(bins, plat)
                                                            return(self$dataplateau)}
-                               
+                                                              
                                if(CourbeNIST =="- Moyenne Blanc") {self$setDataPlateauMoinsBlanc(bins, plat)
                                                                    return(self$dataPlateauMoinsBlanc) }
-                               
+                                                              
                                if(CourbeNIST =="> LOD") {self$setDataPlateauMoinsBlancSupLOD(bins, plat)
                                                          return(self$dataPlateauMoinsBlancSupLOD) }
-                               
+                                                              
                                if(CourbeNIST =="Normalisé") {self$setDataNorm(bins, plat)
                                                              return(self$dataPlateauMoinsBlancSupLODNorm) }
-                               
+                                                              
                                if(CourbeNIST =="Sans Anomalie") {self$setDataDesanomalise(bins, plat)
                                                                  return(self$dataPlateauMoinsBlancSupLODNormSansAnom) } 
-                               
-                               if(CourbeNIST =="Concentration") {self$setDataDesanomaliseConc(bins, plat)
+                                                              
+                               if(CourbeNIST =="Concentration") {self$setDataDesanomaliseConc(bins, plat, SimNist)
                                                                  return(self$dataPlateauMoinsBlancSupLODNormSansAnomConc) }
                              },
                              
@@ -380,6 +418,7 @@ elementR_project <- R6Class("elementR_project",
                               listeElem = NA,
                               flag_Calib = NA,
                               flag_Sample = NA,
+                              SummaryNist = NA,
                               
                               setflagCalib = function(place, valeur){
                                 
@@ -397,9 +436,15 @@ elementR_project <- R6Class("elementR_project",
                                 
                               }, #setflagSample
                               
+                              setSummaryNist = function(x){
+                                
+                                self$SummaryNist <- x
+                                
+                              },
+                              
                               initialize = function(folderPath=NULL, elem = NULL) {   
                                 if(is.null(folderPath)) stop("\n #### A folder path is required to create an elementR project '[^_-]'")
-                                if(sum(c("calibrations","samples","standards.csv")%in%dir(folderPath))!=3) stop("\n #### A folder should contain two subfolder 'calibrations' and 'samples', as well as a file named standards.csv to create an elementR project '[^_-]'")
+                                if(sum(c("calibrations","samples","Standart")%in%dir(folderPath))!=3) stop("\n #### A folder should contain two subfolder 'calibrations' and 'samples', as well as a file named standards.csv to create an elementR project '[^_-]'")
                                 self$folderPath <- folderPath
                                 charStrings <- unlist(strsplit(folderPath,"/"))
                                 self$name <- charStrings[length(charStrings)]
@@ -476,7 +521,8 @@ elementR_rep <- R6Class("elementR_rep",
                           rep_Files = NA,
                           rep_data = NA,
                           rep_table = NA,
-                          rep_Stand = NA,
+                          rep_Stand = NA,                          
+                          rep_pas = NA, # moyenne du pas de temps entre deux analyses
                           
                           initialize = function(rep_folderPath=NULL, stand = NULL) {
                             
@@ -492,7 +538,13 @@ elementR_rep <- R6Class("elementR_rep",
                             self$create()
                             
                             self$greet()
-                          },#initialize                   
+                          },#initialize              
+                          
+                          setRep_pas = function(){
+                            
+                            self$rep_pas <- round(mean(unlist(lapply(1:length(self$rep_data),function(x){sapply(1:(length(self$rep_data[[x]])-1), function(i){self$rep_data[[x]]$data[i+1,1]-self$rep_data[[x]]$data[i,1]})}))),2)
+                            
+                          },
                           
                           greet = function() {
                             cat("######\n")
@@ -515,7 +567,7 @@ elementR_repCalib <- R6Class("elementR_repCalib",
                                rep_type = "Calibration",
                                
                                setrep_dataFinale = function(){
-                                 
+                                                                  
                                  listTemp <- list()
                                  
                                  #listTemp2 <- lapply(1:length(self$rep_flag), function(x){self$rep_data[[x]]$data_calibFinal}) ## François
@@ -546,6 +598,8 @@ elementR_repCalib <- R6Class("elementR_repCalib",
                                  
                                  return(tab)
                                  
+                                 
+                                 
                                }, # setRep_table
                                
                                create = function(){
@@ -569,12 +623,10 @@ elementR_repSample <- R6Class("elementR_repSample",
                                rep_deplacement = NA, # vecteur delta d'aligneent
                                rep_dataIntermSpot = NA, # chaque replicat moyenné pour les spots
                                rep_dataIntermRaster = NA, # chaque replicat avec son delta d'alignement                               
-                               rep_dataIntermSpotBis = NA, 
-                               rep_dataIntermRasterBis = NA, # moyenne des courbes                               
+                               rep_dataIntermSpotBis = NA, # tableau avec la moyenne des moyennes
+                               rep_dataFinaleCorrel = NA, # moyenne des courbes                               
                                rep_dataNonCorrel = NA, # moyenne sans points adjacents   
                                rep_coord = NA, # coordonnée point choisi
-                               rep_dataFinale = NA, # moyenne de tous les réplicats
-                               rep_pas = NA, # moyenne du pas de temps entre deux analyses
                                rep_flagSpot = c(0,0), # temoin du réalignement spot
                                rep_flagRaster =  c(0,0,0,0,0), # temoin du réalignement raster
                                rep_vitesse = NA, #vitesse raster
@@ -582,13 +634,7 @@ elementR_repSample <- R6Class("elementR_repSample",
                                
                                setrep_type2 = function(x){
                                  self$rep_type2 <- x
-                               },
-                               
-                               setRep_pas = function(){
-                                 
-                                self$rep_pas <- mean(unlist(lapply(1:length(self$rep_data),function(x){sapply(1:(length(self$rep_data[[x]])-1), function(i){self$rep_data[[x]]$data[i+1,1]-self$rep_data[[x]]$data[i,1]})})))
-                                                                                                                                                                    
-                               },
+                               },                          
                              
                                create = function(){
                                  
@@ -709,9 +755,9 @@ elementR_repSample <- R6Class("elementR_repSample",
                                
                                setRep_coord = function(z){
                                  
-                                 temp <- self$lePlusProche(self$rep_dataIntermRasterBis[,1], z$x)
+                                 temp <- self$lePlusProche(self$rep_dataFinaleCorrel[,1], z$x)
                                  
-                                 self$rep_coord <- self$rep_dataIntermRasterBis[temp$place, ]
+                                 self$rep_coord <- self$rep_dataFinaleCorrel[temp$place, ]
                                  
                                },                               
                                
@@ -733,7 +779,7 @@ elementR_repSample <- R6Class("elementR_repSample",
                                    
                                    colnames(MatTemp) <- colnames(self$rep_data[[1]]$data)
                                    
-                                   self$rep_dataIntermRasterBis <- MatTemp
+                                   self$rep_dataFinaleCorrel <- MatTemp
                                    
                                  }
                                  
@@ -789,13 +835,13 @@ elementR_repSample <- R6Class("elementR_repSample",
                                
                                setrep_dataNonCorrel = function(enlever, point){
                                                                   
-                                 tempApres <- self$rep_dataIntermRasterBis[self$lePlusProche(self$rep_dataIntermRasterBis[,1], point[[1]])[[2]]:dim(self$rep_dataIntermRasterBis)[1],]
+                                 tempApres <- self$rep_dataFinaleCorrel[self$lePlusProche(self$rep_dataFinaleCorrel[,1], point[[1]])[[2]]:dim(self$rep_dataFinaleCorrel)[1],]
                                  
                                  if(is.null(dim(tempApres)[1])){
                                    tempApres <- t(as.matrix(tempApres))                                   
                                  }   
                                  
-                                 tempAvant <- self$reverseMatrix(self$rep_dataIntermRasterBis[1:self$lePlusProche(self$rep_dataIntermRasterBis[,1], point[[1]])[[2]],])
+                                 tempAvant <- self$reverseMatrix(self$rep_dataFinaleCorrel[1:self$lePlusProche(self$rep_dataFinaleCorrel[,1], point[[1]])[[2]],])
                                                                                                                                    
                                  if(dim(tempApres)[1] %% enlever == 0){
                                    nAv <- dim(tempApres)[1]/enlever
