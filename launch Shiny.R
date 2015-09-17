@@ -1,0 +1,27 @@
+#install.packages("shiny")
+#install.packages("devtools", dependencies = T) 
+#install.packages("shinydashboard", dependencies = T)
+#devtools::install_github("rstudio/shinydashboard")
+#install.packages("devtools", dependencies = T) 
+#install.packages("R6", dependencies = T)
+#install.packages("tseries", dependencies = T)
+#install.packages("xts", dependencies = T)
+#install.packages("abind", dependencies = T)
+#install.packages("gplots", dependencies = T)
+#install.packages("graphics", dependences =T)
+
+library(shiny)
+library(devtools)
+library(R6)
+library(shinydashboard)
+library(tseries)
+library(xts)
+library("graphics")
+library("gplots")
+library("stringr")
+library("abind")
+
+setwd("/home/cha/Documents") # A changer ici
+runApp("elementR", launch.browser = T)
+
+runGitHub( "ElementR", "charlottesirot", ref = "dashDy-Cha", launch.browser = T) 
