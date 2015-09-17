@@ -658,7 +658,7 @@ server <- function(input, output, session) {
                              br(),
                              column(1),
                              column(11,
-                                    sliderInput("bins","Machine noise limits", value = value1, min = minB, max = maxB, step = step, width = '95%'),
+                                    sliderInput("bins","Machine noise limits", value = value1, min = minB, max = maxB, step = step, width = '95%', round = T),
                                     sliderInput("plat","Plateau limits", value = value2, min = minP, max = maxP,step = step, width = '95%')
                              )
                       ),
