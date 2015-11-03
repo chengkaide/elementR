@@ -53,7 +53,7 @@ elementR_data <- R6Class("elementR_data",
                              #####dealing with data
                              d <- read.csv(fPath,sep=";",dec=",",header=TRUE)
                              self$data <- d
-                             self$greet()
+#                              self$greet()
                            },#initialize
                            
                            ######################################## Data Blanc
@@ -164,19 +164,19 @@ elementR_data <- R6Class("elementR_data",
                            
                            setDataDesanomalise = function(bins, plat){
                              
-                             print("step4")
+#                              print("step4")
                              
                              self$setDataNorm(bins, plat)
                              
-                             print("step5")
+#                              print("step5")
                              
                              ValMax <- apply(self$dataPlateauMoinsBlancSupLODNorm[,-1], 2, function(k){mean(k, na.rm = T) + 2*sd(k,na.rm = T)})
                              
-                             print("step6")
+#                              print("step6")
                              
                              ValMin <- apply(self$dataPlateauMoinsBlancSupLODNorm[,-1], 2, function(k){mean(k, na.rm = T) - 2*sd(k,na.rm = T)})
                              
-                             print("step7")
+#                              print("step7")
                              
                              subDat <- do.call(rbind,lapply(1:dim(self$dataPlateauMoinsBlancSupLODNorm[,-1])[1], function(z){
                                
@@ -186,7 +186,7 @@ elementR_data <- R6Class("elementR_data",
                                
                              }))
                              
-                             print("step8")
+#                              print("step8")
                              
                              self$dataPlateauMoinsBlancSupLODNormSansAnom <- cbind(as.matrix(self$dataPlateauMoinsBlancSupLODNorm[,1]),subDat)
                              
@@ -306,6 +306,7 @@ elementR_sample <- R6Class("elementR_sample",
                              type = "sample",
                              standard = NA,
                              dataPlateauMoinsBlancSupLODNormSansAnomConc = NA,
+                             dataPlateauMoinsBlancSupLODNormSansAnomConcCorr = NA,
                              platSample = c(NA,NA),
                              binsSample = NA,
                              
@@ -325,21 +326,20 @@ elementR_sample <- R6Class("elementR_sample",
                                
                                self$standard <- stand
                                                               
-                             },                          
+                             }, 
+                             
                          
                              ##########################################################
                              
                              setDataDesanomaliseConc = function(bins, plat, SimNist){
                                
-                               print("step1")
+#                                print("step1")
                                
                                self$setDataDesanomalise(bins, plat)    
                                
-                               print("step2")
+#                                print("step2")
                                                            
                                temp <- sapply(2:ncol(self$dataPlateauMoinsBlancSupLODNormSansAnom), function(x){
-                                 
-                                 print(x)
                                  
                                  self$dataPlateauMoinsBlancSupLODNormSansAnom[,x] * self$standard[1,x-1]/ SimNist[x-1]
                                  
@@ -347,15 +347,39 @@ elementR_sample <- R6Class("elementR_sample",
                                
                                self$dataPlateauMoinsBlancSupLODNormSansAnomConc <- cbind(as.matrix(self$dataPlateauMoinsBlancSupLODNormSansAnom[,1]),temp)
                                
-                               print("step3")
+#                                print("step3")
                                
                                colnames(self$dataPlateauMoinsBlancSupLODNormSansAnomConc) <- colnames(self$dataPlateauMoinsBlancSupLODNormSansAnom)
                                
                              }, #setDataDesanomaliseConc
                              
                              ##########################################################
-                             
-                             getData = function(CourbeNIST, bins, plat, SimNist){
+
+                            setDataDesanomaliseConcCorr = function(bins, plat, nom, summarySession, model){
+                                
+                                self$setDataDesanomalise(bins, plat) 
+                                
+                                rank <- summarySession[which(summarySession[,1] == nom),2]
+                                                                
+                                temp <- sapply(2:ncol(self$dataPlateauMoinsBlancSupLODNormSansAnom), function(x){
+                                  
+                                  StandTheoric <- model[[x-1]][1] + rank * model[[x-1]][2]
+                                  
+                                  return(self$dataPlateauMoinsBlancSupLODNormSansAnom[,x] * self$standard[1,x-1] / StandTheoric)
+                                  
+                                })
+
+                                
+                                self$dataPlateauMoinsBlancSupLODNormSansAnomConcCorr <- cbind(as.matrix(self$dataPlateauMoinsBlancSupLODNormSansAnom[,1]),temp)
+                                
+                                colnames(self$dataPlateauMoinsBlancSupLODNormSansAnomConcCorr) <- colnames(self$dataPlateauMoinsBlancSupLODNormSansAnom)
+
+                                return(self$dataPlateauMoinsBlancSupLODNormSansAnomConcCorr)
+                                
+                              }, #setDataDesanomaliseConc
+                            
+                            ##########################################################
+                             getData = function(CourbeNIST, bins, plat, nom, SimNist, summarySession, model){
                               
                                if(CourbeNIST =="Blanc") {self$setDataBlanc(bins, plat)
                                                          return(self$dataBlanc)}
@@ -379,6 +403,10 @@ elementR_sample <- R6Class("elementR_sample",
                                                               
                                if(CourbeNIST =="Concentration") {self$setDataDesanomaliseConc(bins, plat, SimNist)
                                                                  return(self$dataPlateauMoinsBlancSupLODNormSansAnomConc) }
+                               
+                               if(CourbeNIST == "Conc. corrected") {self$setDataDesanomaliseConcCorr(bins, plat, nom, summarySession, model)
+                                                                    return(self$dataPlateauMoinsBlancSupLODNormSansAnomConcCorr)}
+                               
                              },
                              
                              greet = function() {
@@ -418,7 +446,27 @@ elementR_project <- R6Class("elementR_project",
                               listeElem = NA,
                               flag_Calib = NA,
                               flag_Sample = NA,
-                              SummaryNist = NA,
+                              SummaryNist = NA, # Nist values (mean & sd)
+                              sessionSummary = NA, # NISTs and samples rank
+                              elementChecking = NA,
+                              regressionModel = list(),
+                              machineCorrection = NA,
+                              
+                              vectorCheck = function(vecteur1, vecteur2){
+                                
+                                res <- vector()
+                                
+                                if(length(vecteur1) != length(vecteur2)){return(1)}
+                                if(length(vecteur1) == length(vecteur2)){
+                                  for(i in 1:length(vecteur1)){
+                                    if(vecteur1[i] == vecteur2[i]){res[i] <- 0}
+                                    if(vecteur1[i] != vecteur2[i]){res[i] <- 1}
+                                  }
+                                  if(length(which(res == 1)) != 0){return(1)}
+                                  else{return(0)}
+                                }
+                                
+                              }, # error 1 
                               
                               setflagCalib = function(place, valeur){
                                 
@@ -442,20 +490,112 @@ elementR_project <- R6Class("elementR_project",
                                 
                               },
                               
-                              initialize = function(folderPath=NULL, elem = NULL) {   
-                                if(is.null(folderPath)) stop("\n #### A folder path is required to create an elementR project '[^_-]'")
-                                if(sum(c("calibrations","samples","Standart")%in%dir(folderPath))!=3) stop("\n #### A folder should contain two subfolder 'calibrations' and 'samples', as well as a file named standards.csv to create an elementR project '[^_-]'")
-                                self$folderPath <- folderPath
-                                charStrings <- unlist(strsplit(folderPath,"/"))
-                                self$name <- charStrings[length(charStrings)]
-                                                                
-                                # Etalon
-                                self$EtalonPath <- paste0(folderPath,"/Standart")
-                                self$EtalonName <- dir(self$EtalonPath)[1]
-                                temp <- read.csv(paste0(folderPath,"/Standart/", self$EtalonName), sep = ";", dec = ",", h = T)
-                                self$EtalonData <- t(as.matrix(sapply(2: ncol(temp), function(x){as.numeric(as.character(temp[1,x]))})))
-                                colnames(self$EtalonData) <- colnames(temp)[2:length(colnames(temp))]
+                              setelem = function(x){
+                                self$listeElem <- x
+                              },
+                              
+                              
+                              setCorrection = function(x){
                                 
+                                self$machineCorrection <- x
+                                
+                              },
+                              
+                              correction = function(x){
+                                
+                                Nbelem <- length(self$listeElem)
+                                
+                                tableau <- matrix(data = NA, nrow = Nbelem, ncol = 6)
+                                colnames(tableau) <- c("Norm.", "Homosc.","Indep.", "Regress.Test", "intercept","A")
+                                rownames(tableau) <- self$listeElem
+                                
+                                # construction du model
+                                temp <- str_sub(rownames(self$SummaryNist), 1, -6)
+                                
+                                X <- vector()
+                                for (i in 1:length(self$calibrationsFiles)){
+                                  X[i] <- self$sessionSummary[which(self$sessionSummary[,1] == temp[i]),2] 
+                                  
+                                }
+                                
+                                for(j in 1:(Nbelem)){
+                                  Y <- self$SummaryNist[1:length(self$calibrationsFiles),j]               
+                                  
+                                  model <- lm(Y~X)
+                                  
+                                  self$regressionModel[[j]] <- model
+                                  
+                                  # tests 
+                                  model.res <- model$res
+                                  
+                                  res_test <- vector()
+                                  
+                                  if(length(which(Y != 1)) == 0){res_test <- NA}
+                                  else{
+                                    
+                                    res_test[1] <- shapiro.test(model.res)$p.value
+                                    res_test[2] <- hmctest(model)$p.value
+                                    res_test[3] <- dwtest(model)$p.value
+                                    res_test[4] <- summary(model)$coefficients[2,4]
+                                    res_test[5:6] <- summary(model)$coefficients[,1]
+                                  }
+                                  
+                                  tableau[j,] <- res_test
+                                }                                 
+                                return(tableau)
+                                
+                              },
+                              
+                              initialize = function(folderPath=NULL) {   
+                                if(is.null(folderPath)) stop("\n #### A folder path is required to create an elementR project '[^_-]'")
+                                if(sum(c("calibrations","samples","settings")%in%dir(folderPath))!=3) stop("\n #### A folder should contain three subfolder 'calibrations', 'samples' and 'settings' to create an elementR project '[^_-]'")
+                                self$folderPath <- folderPath
+                                charStrings <- unlist(strsplit(folderPath,"/"))                                
+                                self$name <- charStrings[length(charStrings)]
+                                
+                                # Check element names and order 
+                                dirTemp <- getwd()
+                                
+                                error <- 0
+                                location <- vector()
+                                k <- 1
+                                
+                                setwd(paste0(folderPath, "/calibrations"))
+                                files <- list.files(, recursive = T)
+                                
+                                temp <- read.csv(files[1], sep = ";")
+                                toCheck <- colnames(temp)[-1]
+                                
+                                for (i in 2: length(files)){
+                                  temp <- colnames(read.csv(files[i], sep = ";"))[-1]
+                                  if(self$vectorCheck(toCheck, temp) == 0){}
+                                  if(self$vectorCheck(toCheck, temp) == 1){error <- 1; location[k] <- files[i]; k <- k+1;}   
+                                }
+                                
+                                setwd(paste0(dirTemp, "/", folderPath, "/samples"))
+                                files <- list.files(, recursive = T)
+                                
+                                for (i in 1: length(files)){
+                                  temp <- colnames(read.csv(files[i], sep = ";"))[-1]
+                                  if(self$vectorCheck(toCheck, temp) == 0){}
+                                  if(self$vectorCheck(toCheck, temp) == 1){error <- 1; location[k] <- files[i]; k <- k+1;}                                  
+                                }  
+                                setwd(paste0(dirTemp, "/", folderPath, "/settings"))
+                                temp <- colnames(read.csv("Standard.csv", sep = ";"))[-1]
+                                if(self$vectorCheck(toCheck, temp) == 0){}
+                                if(self$vectorCheck(toCheck, temp) == 1){error <- 1; location[k] <- "Standard.csv"; k <- k+1;}
+                                
+                                self$elementChecking <- c(error, location)
+                                setwd(dirTemp)
+                                
+                                
+                                # Etalon
+                                self$EtalonPath <- paste0(folderPath,"/settings")
+                                temp <- read.csv(paste0(folderPath,"/settings/Standard.csv"), sep = ";", dec = ",", h = T)
+                                self$EtalonData <- t(as.matrix(sapply(2: ncol(temp), function(x){as.numeric(as.character(temp[1,x]))})))
+                                colnames(self$EtalonData) <- colnames(temp)[2:length(colnames(temp))]     
+                                self$sessionSummary <- read.csv(paste0(folderPath,"/settings/Session summary.csv"), sep = ";", dec = ",", h = T)                      
+                                                                
                                 #calibrations
                                 self$calibrationsPath <- paste0(folderPath,"/calibrations")
                                 calFiles <- dir(self$calibrationsPath)                                
@@ -475,11 +615,6 @@ elementR_project <- R6Class("elementR_project",
                                 names(sampList) <- sampFiles
                                 self$samples <- sampList  
                                 
-                                self$listeElem <- elem
-                                
-                                self$greet()
-
-                                
                                 # Flags
                                 self$flag_Calib <- rep(0, length(self$calibrationsFiles))
                                 names(self$flag_Calib) <- self$calibrationsFiles
@@ -487,7 +622,7 @@ elementR_project <- R6Class("elementR_project",
                                 flagTemp <- lapply(1:length(self$samplesFiles), function(x){dir(paste0(folderPath,"/samples/",self$samplesFiles[x]))})
                                 self$flag_Sample <- lapply(1: length(flagTemp), function(x){ r <- rep(0, length(flagTemp[[x]])) ; names(r) <- flagTemp[[x]] ; r})                                
                                 
-                                self$greet()
+#                                 self$greet()
                               },#initialize
                               
                               greet = function() {
@@ -499,7 +634,6 @@ elementR_project <- R6Class("elementR_project",
                                 cat("My calibration files are ", self$calibrationsFiles, "\n")
                                 cat("My samples folder is ", self$samplesPath, "\n")
                                 cat("My samples files are ", self$samplesFiles, "\n")
-                                cat("My Elements are ", self$listeElem, "\n")
                                 #cat("flag sample is ", self$flag_Sample, "\n")
                                 cat("######\n")     
                               }#greet
@@ -537,7 +671,7 @@ elementR_rep <- R6Class("elementR_rep",
                             
                             self$create()
                             
-                            self$greet()
+#                             self$greet()
                           },#initialize              
                           
                           setRep_pas = function(){
@@ -628,7 +762,7 @@ elementR_repSample <- R6Class("elementR_repSample",
                                rep_dataNonCorrel = NA, # moyenne sans points adjacents   
                                rep_coord = NA, # coordonnée point choisi
                                rep_flagSpot = c(0,0), # temoin du réalignement spot
-                               rep_flagRaster =  c(0,0,0,0,0), # temoin du réalignement raster
+                               rep_flagRaster =  c(0,0), # temoin du réalignement raster
                                rep_vitesse = NA, #vitesse raster
                                rep_diam = NA, # diamètre raster
                                
@@ -699,7 +833,7 @@ elementR_repSample <- R6Class("elementR_repSample",
                                
                                setRep_dataFiltre = function(){
                                  
-                                 self$rep_dataFiltre <- lapply(1:length(self$rep_Files),function(x){self$rep_data[[x]]$dataPlateauMoinsBlancSupLODNormSansAnomConc})
+                                 self$rep_dataFiltre <- lapply(1:length(self$rep_Files),function(x){self$rep_data[[x]]$dataPlateauMoinsBlancSupLODNormSansAnomConcCorr})
                                                                   
                                },
                                

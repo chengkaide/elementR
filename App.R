@@ -14,7 +14,17 @@
 ############ LIBRARIES
 ######################
 library(shiny)
+library(devtools)
+library(R6)
 library(shinydashboard)
+library(tseries)
+library(xts)
+library("graphics")
+library("gplots")
+library("stringr")
+library("abind")
+library(stringr)
+library(lmtest)
 
 #imported from classElementR_R6.R
 #library(R6) #shiny depends
@@ -46,6 +56,40 @@ alignCenter <- function(el) {
                                  style="margin-up:auto;margin-down:auto;"
   )
 }
+
+PlotIC <- function(nom, Mean,SD, lengthSeg, xlim, ylim, type = "p"){
+  plot(as.factor(nom), rep(-1,length(nom)), ylim = ylim, xlim = xlim, type = type)
+  points(1:length(Mean),Mean)
+  segments(1:length(Mean), Mean-SD, 1:length(Mean), Mean+SD)
+  segments((1:length(Mean))-lengthSeg,Mean+SD,(1:length(Mean))+lengthSeg,Mean+SD)
+  segments((1:length(Mean))-lengthSeg,Mean-SD,(1:length(Mean))+lengthSeg,Mean-SD)
+}
+
+# Choix = vecteur d'élements à choisir, longueurDesirer = longueur du mot, combinaisonDesirer = nombre de combinaisons désirées
+geneR = function(choix, longueurDesirer, combinaisonDesirer){
+  
+  temp <- vector()
+  
+  nombreMax = length(choix)^longueurDesirer
+  
+  if(combinaisonDesirer > nombreMax){print("Impossible")}
+  else{
+    while(length(temp) != combinaisonDesirer){
+      
+      nom <- paste(sample(choix, longueurDesirer, replace = T), collapse = "")
+      
+      if(length(which(temp == nom) != 0) ){}
+      else{ temp <- c(temp, nom)}
+      
+    }
+    
+    return(temp)
+  }
+  
+  
+}
+
+letterChoice <- c("a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p","q","r","s","t","u","v","w","x","y","z")
 
 ######################
 ################### UI
@@ -93,7 +137,7 @@ body <- dashboardBody(
               
               uiOutput("ChoixDonne1"),
               uiOutput("ChoixDonne2")
-              )
+            )
             
             
             
@@ -110,6 +154,7 @@ body <- dashboardBody(
     tabItem("Etalon",
             uiOutput("Text1"),
             uiOutput("Text2"),
+            uiOutput("Text2Bis"),
             br(),            
             fluidRow(
               uiOutput("Text3")
@@ -128,15 +173,21 @@ body <- dashboardBody(
                 column(3,                 
                        uiOutput("sample1")
                 ), # Column
-                br(),
+                
                 column(2,
+                       br(),
                        uiOutput("sample2")
                 ), # Column
                 column(2,
+                       br(),
                        uiOutput("sample3")
                 ), # Column
-                column(2,
+                column(1,
+                       br(),
                        uiOutput("sample4")
+                ),
+                column(1,
+                       uiOutput("sample6")
                 )
                 
             ),
@@ -166,7 +217,7 @@ body <- dashboardBody(
                   tableOutput("textRealign3")
               ), # div
               div(style='overflow-y: scroll',
-                  uiOutput("textRealign5_ui")
+                  plotOutput("textRealign5")
               ) # div       
             ) # fluidRow
     )
@@ -181,10 +232,6 @@ header <- dashboardHeader(
 )
 
 ui <- dashboardPage(header, sidebar, body, skin = skin)
-
-######################
-############### SERVER
-######################
 
 server <- function(input, output, session) {  
   
@@ -205,7 +252,7 @@ server <- function(input, output, session) {
     if(is.null(input$export)){}
     else{
       if(input$export > 0){
-       
+        
         espace1 = getwd()
         dir.create(paste0("Data/",input$folderProjectIn,"/Done"))
         setwd(paste0("Data/",input$folderProjectIn,"/Done"))
@@ -267,30 +314,46 @@ server <- function(input, output, session) {
             } 
           }
           
-          }) #eo lapply
-
+        }) #eo lapply
+        
         setwd(espace1)
       } # if
     } #else
   }) #observe
   
-  observe({
+  observe({ 
+    
+    input$createProjButton
+    
     if(is.null(data$temp)){
       output$premier = renderUI({
-      fluidRow(
-        box(
-          background = "light-blue",
-          height = 100,
-          width = 12,
-          column(9,                       
-                 h2(icon("flask"),"Step 1. Choose to create a new project or load an existing one"),
-                 uiOutput("dataAtraiter")
-          )
-        )#box
-      )#fluidRow
-    })
+        fluidRow(
+          box(
+            background = "light-blue",
+            height = 100,
+            width = 12,
+            column(9,                       
+                   h2(icon("flask"),"Step 1. Choose to create a new project or load an existing one")
+            )
+          )#box
+        )#fluidRow
+      })
     }
     else{
+      if(dataChoisies$temp == 0 & currentProject()$elementChecking[1] == 1){
+        output$premier = renderUI({
+          fluidRow(
+            box(
+              background = "light-blue",
+              height = 100,
+              width = 12,
+              column(9,                       
+                     h2(icon("flask"),"Step 1. Choose to create a new project or load an existing one")
+              )
+            )#box
+          )#fluidRow
+        })
+      }
       if(dataChoisies$temp == 1){
         output$premier = renderUI({
           fluidRow(
@@ -299,8 +362,7 @@ server <- function(input, output, session) {
               height = 100,
               width = 12,
               column(9,                       
-                     h2(icon("flask"),"Step 1. Choose to create a new project or load an existing one"),
-                     uiOutput("dataAtraiter")
+                     h2(icon("flask"),"Step 1. Choose to create a new project or load an existing one")
               ),
               column(3, 
                      br(),
@@ -310,7 +372,7 @@ server <- function(input, output, session) {
           )#fluidRow
         })
       }
-      if(dataChoisies$temp == 0){
+      if(dataChoisies$temp == 0 & currentProject()$elementChecking[1] == 0){
         output$premier = renderUI({
           fluidRow(
             box(
@@ -318,8 +380,7 @@ server <- function(input, output, session) {
               height = 100,
               width = 12,
               column(9,                       
-                     h2(icon("flask"),"Step 1. Choose to create a new project or load an existing one"),
-                     uiOutput("dataAtraiter")
+                     h2(icon("flask"),"Step 1. Choose to create a new project or load an existing one")
               ),
               column(3, 
                      br(),
@@ -344,7 +405,7 @@ server <- function(input, output, session) {
         dataChoisies$temp <- 1
       }
     }
-    })
+  })
   
   observe({
     if(is.null(input$SuppDonne)){}
@@ -353,7 +414,7 @@ server <- function(input, output, session) {
         dataChoisies$temp <- 0
       }
     }
-
+    
   })
   
   observe({  
@@ -368,16 +429,10 @@ server <- function(input, output, session) {
           #background = "aqua",
           status="primary",
           solidHeader = TRUE,
-          height=400,
+          height=250,
           h4("1. Choose the project folder"),
           selectInput("folderProjectIn", NULL ,  as.matrix(dir("Data")),multiple = FALSE),
-          br(),
-          h4("2. Choose elements to consider"),
-          checkboxGroupInput("ElementGroup", label = "", 
-                             choices = colnames(read.csv(paste(getwd(),"Data/example_1/calibrations",dir("Data/example_1/calibrations")[1],sep="/"), sep = ";", h = T, dec =","))[-1],
-                             selected = colnames(read.csv(paste(getwd(),"Data/example_1/calibrations",dir("Data/example_1/calibrations")[1],sep="/"), sep = ";", h = T, dec =","))[-1], inline = T),
-          br(),
-          h4("3. Create the project"),
+          h4("2. Create the project"),
           actionButton("createProjButton", "Create project !")
         )
         
@@ -394,7 +449,7 @@ server <- function(input, output, session) {
           
           h4("1. Choose a project to load"),
           actionButton("loadProjButton","Load Project")
-
+          
         )
         
       })
@@ -473,8 +528,8 @@ server <- function(input, output, session) {
               h3(icon("check"), paste0("Calibration: ", paste0(temoin$temp[[6]], collapse = " "))),
               h3(icon("check"), paste0("Sample: ", paste0(temoin$temp[[7]], collapse = " "))),
               h3(icon("check"), paste0("Considered elements: ", paste0(temoin$temp[[9]], collapse = " ")))
-              )
-              
+            )
+            
           })
           
           output$ChoixDonne2 <- renderUI({})
@@ -499,11 +554,70 @@ server <- function(input, output, session) {
     else{
       input$createProjButton
       
-      if (input$createProjButton!=0) {data$temp <- elementR_project$new(paste("Data/",input$folderProjectIn,sep=""), elem = input$ElementGroup)
+      if (input$createProjButton!=0) {sauvegarde = getwd()
+                                      
+                                      data$temp <- elementR_project$new(paste("Data/",input$folderProjectIn,sep=""))
                                       
                                       temoin$temp = list(1, "Création projet", input$folderProjectIn, paste("Data/",input$folderProjectIn,sep=""), dir(paste("Data/",input$folderProjectIn,"/calibrations",sep="")), dir(paste("Data/",input$folderProjectIn,"/samples",sep="")), data$temp$listeElem)
-
+                                      
+                                      if(currentProject()$elementChecking[1] == 0){ 
+                                        
+                                        output$ChoixDonne1 <- renderUI({
+                                          
+                                          box(
+                                            title = list(icon("folder-o"),"New Project"),
+                                            width = 6,
+                                            #background = "aqua",
+                                            status="primary",
+                                            solidHeader = TRUE,
+                                            height=450,
+                                            h4("1. Choose the project folder"),
+                                            selectInput("folderProjectIn", NULL ,  as.matrix(dir(paste0(sauvegarde,"/Data/"))),multiple = FALSE),
+                                            h4("2. Create the project"),
+                                            actionButton("createProjButton", "Create project !"),
+                                            br(),
+                                            br(),
+                                            h4("3. Checking elements"),
+                                            h4(icon("check"), "Elements checked"),
+                                            br(),
+                                            h4("4. Choose elements to consider"),
+                                            checkboxGroupInput("ElementGroup", label = "", 
+                                                               choices = colnames(read.csv(paste(getwd(),"Data/example_1/calibrations",dir("Data/example_1/calibrations")[1],sep="/"), sep = ";", h = T, dec =","))[-1],
+                                                               selected = colnames(read.csv(paste(getwd(),"Data/example_1/calibrations",dir("Data/example_1/calibrations")[1],sep="/"), sep = ";", h = T, dec =","))[-1], inline = T)                                            
+                                          )
+                                          
+                                        })
+                                      }
+                                      
+                                      else{
+                                        
+                                        output$ChoixDonne1 <- renderUI({
+                                          
+                                          box(
+                                            title = list(icon("folder-o"),"New Project"),
+                                            width = 6,
+                                            #background = "aqua",
+                                            status="primary",
+                                            solidHeader = TRUE,
+                                            height=300,
+                                            h4("1. Choose the project folder"),
+                                            selectInput("folderProjectIn", NULL ,  as.matrix(dir(paste0(sauvegarde,"/Data/"))),multiple = FALSE),
+                                            h4("2. Create the project"),
+                                            actionButton("createProjButton", "Create project !"),
+                                            h4("3. Checking elements"),
+                                            h4(icon("times"), paste0("Problem in ", paste(currentProject()$elementChecking[2])))
+                                            
+                                          )
+                                          
+                                        })
+                                        
+                                      }
+                                      
+                                      
       }
+      
+      updateSelectInput(session, "folderProjectIn", selected = input$folderProjectIn)
+      
     }
     
   })
@@ -522,10 +636,10 @@ server <- function(input, output, session) {
         data$temp <- myProject
         
         temoin$temp = list(2, "Chargement d'une session déjà traitée", nomData$temp, data$temp$name, data$temp$folderPath, data$temp$calibrationsFiles, data$temp$samplesFiles, data$temp$EtalonName, data$temp$listeElem)
-      
+        
       }  
     }
-   })
+  })
   
   currentProject <- reactive({
     if(is.null(input$createProjButton)){}
@@ -537,10 +651,12 @@ server <- function(input, output, session) {
       data$temp
     }    
   })
-
+  
   #######################
   ##### NISTS ###########
   #######################
+  
+  doneSample <- reactiveValues(temp = NULL)
   
   observe({
     if(is.null(currentProject())){}
@@ -557,7 +673,9 @@ server <- function(input, output, session) {
         
         Temp0 <- reactiveValues(t = NULL)
         Temp1 <- reactiveValues(t = NULL)
-        Temp2 <- reactiveValues(t = NULL)
+        Temp2 <- reactiveValues(t = NULL)       
+        
+        currentProject()$setelem(input$ElementGroup)
         
         dataPlot2 <- reactiveValues(dat = NULL)
         
@@ -572,196 +690,348 @@ server <- function(input, output, session) {
           }  
         })
         
+        flagTemp <- reactiveValues(temp = rep(0,length(currentProject()$calibrationsFiles)))
+        valid <- reactiveValues(temp = rep(0,length(currentProject()$calibrationsFiles)))
+        
         observe({
           if(is.null(input$bins)){}
           if(is.null(input$plat)){}
           else{
-            if(input$saveNists > 0){
+            if(valid$temp[which(currentProject()$calibrationsFiles == input$calibrationIn)] > 0){
               isolate({
-                currentProject()$setflagCalib(grep(input$calibrationIn, currentProject()$calibrationsFiles),1)
                 currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$setBins(currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$data[Temp0$t,1])     
                 currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$setPlat(c(currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$data[Temp1$t,1],currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$data[Temp2$t,1]))
                 currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$setDataDesanomalise(currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$data[Temp0$t,1],c(currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$data[Temp1$t,1],currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$data[Temp2$t,1]))
                 currentProject()$calibrations[[1]]$setRep_pas()
-                })                              
+                updateSelectInput(session, "calibrationIn", selected = input$calibrationIn)
+              })                              
               
             }
           }
+          
+        })
+        
+        observe({
+          if(is.null(input$calibrationIn)){
+            
+            output$Nist <- renderUI({
+              
+              fluidRow(
+                box(
+                  width=12,
+                  background = "green",            
+                  height=100,
+                  
+                  column(4, 
+                         h2(icon("flask"),"Step 2. Filtering data from standards")
+                  ),
+                  column(3,
+                         br(),
+                         selectInput("calibrationIn", NULL ,  as.matrix(currentProject()$calibrationsFiles),multiple = FALSE, width = '100%') 
+                  ),
+                  column(3,
+                         br(),
+                         actionButton("saveNists", "Save")
+                  )
+                )#box
+              ) 
+              
+            })
+            
+          }
+          else{
+            if((flagTemp$temp[which(as.matrix(currentProject()$calibrationsFiles) == input$calibrationIn)] %%2) == 0){
+              
+              output$Nist <- renderUI({
+                
+                fluidRow(
+                  box(
+                    width=12,
+                    background = "green",            
+                    height=100,
+                    
+                    column(4, 
+                           h2(icon("flask"),"Step 2. Filtering data from standards")
+                    ),
+                    column(3,
+                           br(),
+                           selectInput("calibrationIn", NULL ,  as.matrix(currentProject()$calibrationsFiles),multiple = FALSE, width = '100%') 
+                    ),
+                    column(3,
+                           br(),
+                           actionButton("saveNists", "Save")
+                    )
+                  )#box
+                ) 
+                
+              })
+              
+              output$Nist2 = renderUI({
+                
+                minB = currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$data[1,1]
+                maxB = currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$data[dim(currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$data)[1],1]
+                
+                minP = currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$data[1,1]
+                maxP = currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$data[dim(currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$data)[1],1]           
+                
+                
+                if(temoin$temp[[1]] == 1){
+                  
+                  value1 = (maxB - minB)/6
+                  value2 = c((maxP - minP)*2/6,(maxP - minP)*4/6)
+                  step = currentProject()$calibrations[[1]]$setRep_pas()
+                  
+                }
+                if(temoin$temp[[1]] == 2){
+                  
+                  value1 = currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$bins
+                  value2 = currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$plat
+                  step = currentProject()$calibrations[[1]]$rep_pas 
+                }   
+                
+                
+                fluidRow(
+                  column(8, plotOutput("distPlot", height = '600px'),
+                         br(),
+                         column(1),
+                         column(11,
+                                sliderInput("bins","Machine noise limits", value = value1, min = minB, max = maxB, step = step, width = '95%', round = T),
+                                sliderInput("plat","Plateau limits", value = value2, min = minP, max = maxP,step = step, width = '95%')
+                         )
+                  ),
+                  column(4,plotOutput("distPlot2", height = '400px'),
+                         br(),
+                         box(
+                           background = "green",
+                           #title = list(icon("home"),"Welcome to element-R"),               
+                           height=150,
+                           width  = 15,
+                           column(6,
+                                  h4(icon("cubes"),"Choose Element to consider"),
+                                  selectInput("listeElem", label = "", choices =  currentProject()$listeElem, selected  = "Li7", width = '100%') 
+                           ), # column
+                           column(6,
+                                  h4(icon("area-chart"),"Choose Curve to plot"),
+                                  selectInput("CourbeNIST", label = "", choices =  c("Blanc","Brute", "Plateau","- Moyenne Blanc","> LOD", "Normalisé", "Sans Anomalie"), selected  = "Plateau", width = '100%') 
+                           )# column 
+                         ) # box
+                         
+                         
+                  ) #column  
+                  
+                ) #fluidRow
+              })
+              
+              output$distPlot <- renderPlot({
+                
+                maxY <- max(currentProject()$calibrations[[1]]$rep_data[[1]]$data)
+                
+                minX <- min(currentProject()$calibrations[[1]]$rep_data[[1]]$data[,1])
+                maxX <- max(currentProject()$calibrations[[1]]$rep_data[[1]]$data[,1])
+                
+                color <- rainbow(length(currentProject()$listeElem))
+                
+                plot(currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$data[,1], currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$data[,2],type ="b", ylab = "Nombre de coups", xlab = "Temps (s)", main = "Raw data", col = color[2], xlim = c(minX, maxX), ylim =c(0,maxY))
+                lapply(3:length(currentProject()$listeElem), function(x){
+                  par(new = T)
+                  plot(currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$data[,1], currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$data[,x],type ="b", ylab = "", xlab = "", main = "", col = color[x], xlim = c(minX, maxX), ylim =c(0,maxY), axes = F)
+                })
+                legend((1-10/100)*maxX,(1+50/1000)*maxY, currentProject()$listeElem, color)
+                
+                # ici j'utilise une fonction des samples pour ne pas a la réécrire dans le script global
+                Temp0$t <- currentProject()$samples[[1]]$lePlusProche(currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$data[,1],input$bins)[[2]]
+                Temp1$t <- currentProject()$samples[[1]]$lePlusProche(currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$data[,1],input$plat[[1]])[[2]]
+                Temp2$t <- currentProject()$samples[[1]]$lePlusProche(currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$data[,1],input$plat[[2]])[[2]]
+                
+                rect(-maxX,-maxY,currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$data[Temp0$t,1],(1+10/100)*maxY, col = "#FF000064", border = NA)
+                
+                rect(currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$data[Temp1$t,1],-maxY,currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$data[Temp2$t,1],(1+10/100)*maxY, col ="#8B735564", border = NA)
+                
+                abline(v = currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$data[Temp0$t,1], lty = "dashed", col = "red", lwd = 2)
+                
+                abline(v = currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$data[Temp1$t,1], lty = "dashed", col = "burlywood4", lwd = 2)
+                abline(v = currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$data[Temp2$t,1], lty = "dashed", col = "burlywood4", lwd = 2)
+                
+                lapply(1:length(currentProject()$listeElem), function(x){points(currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$data[Temp0$t,1], currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$data[Temp0$t,x], cex = 3, col ="red")})
+                lapply(1:length(currentProject()$listeElem), function(x){points(currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$data[Temp1$t,1], currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$data[Temp1$t,x], cex = 3, col ="#A6760F")})
+                lapply(1:length(currentProject()$listeElem), function(x){points(currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$data[Temp2$t,1], currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$data[Temp2$t,x], cex = 3, col ="#A6760F")})
+              })
+              
+              output$distPlot2 <- renderPlot({
+                plot(dataPlot2$dat[,1], dataPlot2$dat[,grep(input$listeElem, colnames(dataPlot2$dat))],  type ="b", ylab = "Nombre de coups", xlab = "Temps (s)")  
+              })
+              
+            }
+            if((flagTemp$temp[which(as.matrix(currentProject()$calibrationsFiles) == input$calibrationIn)] %%2) == 1){
+              
+              output$Nist <- renderUI({
+                
+                fluidRow(
+                  box(
+                    width=12,
+                    background = "green",            
+                    height=100,
+                    
+                    column(4, 
+                           h2(icon("flask"),"Step 2. Filtering data from standards")
+                    ),
+                    column(3,
+                           br(),
+                           selectInput("calibrationIn", NULL ,  as.matrix(currentProject()$calibrationsFiles),multiple = FALSE, width = '100%') 
+                    ),
+                    column(3,
+                           br(),
+                           actionButton("saveNists", "Delete")
+                    )
+                  )#box
+                ) 
+                
+              })
+              
+              output$Nist2 = renderUI({
+                
+                minB = currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$data[1,1]
+                maxB = currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$data[dim(currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$data)[1],1]
+                
+                minP = currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$data[1,1]
+                maxP = currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$data[dim(currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$data)[1],1]           
+                
+                
+                if(temoin$temp[[1]] == 1){
+                  
+                  value1 = (maxB - minB)/6
+                  value2 = c((maxP - minP)*2/6,(maxP - minP)*4/6)
+                  step = currentProject()$calibrations[[1]]$setRep_pas()
+                  
+                }
+                if(temoin$temp[[1]] == 2){
+                  
+                  value1 = currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$bins
+                  value2 = currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$plat
+                  step = currentProject()$calibrations[[1]]$rep_pas 
+                }   
+                
+                
+                fluidRow(
+                  column(8, plotOutput("distPlot", height = '600px')
+                  ),
+                  column(4,plotOutput("distPlot2", height = '400px'),
+                         br(),
+                         box(
+                           background = "green",
+                           #title = list(icon("home"),"Welcome to element-R"),               
+                           height=150,
+                           width  = 15,
+                           column(6,
+                                  h4(icon("cubes"),"Choose Element to consider"),
+                                  selectInput("listeElem", label = "", choices =  currentProject()$listeElem, selected  = "Li7", width = '100%') 
+                           ), # column
+                           column(6,
+                                  h4(icon("area-chart"),"Choose Curve to plot"),
+                                  selectInput("CourbeNIST", label = "", choices =  c("Blanc","Brute", "Plateau","- Moyenne Blanc","> LOD", "Normalisé", "Sans Anomalie"), selected  = "Plateau", width = '100%') 
+                           )# column 
+                         ) # box
+                         
+                         
+                  ) #column  
+                  
+                ) #fluidRow
+              })
+              
+              output$distPlot <- renderPlot({
+                
+                maxY <- max(currentProject()$calibrations[[1]]$rep_data[[1]]$data)
+                
+                minX <- min(currentProject()$calibrations[[1]]$rep_data[[1]]$data[,1])
+                maxX <- max(currentProject()$calibrations[[1]]$rep_data[[1]]$data[,1])
+                
+                color <- rainbow(length(currentProject()$listeElem))
+                
+                plot(currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$data[,1], currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$data[,2],type ="b", ylab = "Nombre de coups", xlab = "Temps (s)", main = "Raw data", col = color[2], xlim = c(minX, maxX), ylim =c(0,maxY))
+                lapply(3:length(currentProject()$listeElem), function(x){
+                  par(new = T)
+                  plot(currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$data[,1], currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$data[,x],type ="b", ylab = "", xlab = "", main = "", col = color[x], xlim = c(minX, maxX), ylim =c(0,maxY), axes = F)
+                })
+                legend((1-10/100)*maxX,(1+50/1000)*maxY, currentProject()$listeElem, color)
+                
+                # ici j'utilise une fonction des samples pour ne pas a la réécrire dans le script global
+                Temp0$t <- currentProject()$samples[[1]]$lePlusProche(currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$data[,1],input$bins)[[2]]
+                Temp1$t <- currentProject()$samples[[1]]$lePlusProche(currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$data[,1],input$plat[[1]])[[2]]
+                Temp2$t <- currentProject()$samples[[1]]$lePlusProche(currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$data[,1],input$plat[[2]])[[2]]
+                
+                rect(-maxX,-maxY,currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$data[Temp0$t,1],(1+10/100)*maxY, col = "#FF000064", border = NA)
+                
+                rect(currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$data[Temp1$t,1],-maxY,currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$data[Temp2$t,1],(1+10/100)*maxY, col ="#8B735564", border = NA)
+                
+                abline(v = currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$data[Temp0$t,1], lty = "dashed", col = "red", lwd = 2)
+                
+                abline(v = currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$data[Temp1$t,1], lty = "dashed", col = "burlywood4", lwd = 2)
+                abline(v = currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$data[Temp2$t,1], lty = "dashed", col = "burlywood4", lwd = 2)
+                
+                lapply(1:length(currentProject()$listeElem), function(x){points(currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$data[Temp0$t,1], currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$data[Temp0$t,x], cex = 3, col ="red")})
+                lapply(1:length(currentProject()$listeElem), function(x){points(currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$data[Temp1$t,1], currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$data[Temp1$t,x], cex = 3, col ="#A6760F")})
+                lapply(1:length(currentProject()$listeElem), function(x){points(currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$data[Temp2$t,1], currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$data[Temp2$t,x], cex = 3, col ="#A6760F")})
+              })
+              
+              output$distPlot2 <- renderPlot({
+                plot(dataPlot2$dat[,1], dataPlot2$dat[,grep(input$listeElem, colnames(dataPlot2$dat))],  type ="b", ylab = "Nombre de coups", xlab = "Temps (s)")  
+              })
+              
+            }
+          }
+          
+          
+        })              
+        
+        observe({
+          
+          if(is.null(input$saveNists)){}
+          else{
+            if(input$saveNists > 0){
+              isolate(flagTemp$temp[which(currentProject()$calibrationsFiles == input$calibrationIn)] <- flagTemp$temp[which(currentProject()$calibrationsFiles == input$calibrationIn)] + 1)
+            }
+          }
+          updateSelectInput(session, "calibrationIn", selected = input$calibrationIn)
+          
         })
         
         observe({
-          if(is.null(input$DeleteNists)){}
-          else{
-            if(input$DeleteNists > 0 ){isolate(currentProject()$setflagCalib(grep(input$calibrationIn, currentProject()$calibrationsFiles),0) )
+          sapply(1:length(currentProject()$calibrationsFiles), function(x){
+            if((flagTemp$temp[x] %% 2) == 1){
+              valid$temp[x] <- 1
+              currentProject()$setflagCalib(x,1)
             }
-          }
-         })
-        
-        output$Nist = renderUI({        
-          
-          fluidRow(
-            box(
-              width=12,
-              background = "green",            
-              height=100,
-              
-              column(4, 
-                     h2(icon("flask"),"Step 2. Filtering data from standards")
-              ),
-              column(3,
-                     br(),
-                     selectInput("calibrationIn", NULL ,  as.matrix(currentProject()$calibrationsFiles),multiple = FALSE, width = '100%') 
-              ),
-              column(3,
-                     br(),
-                     actionButton("saveNists", "Save"),
-                     actionButton("DeleteNists", "Delete")
-              )
-            )#box
-          )
-        })  
-        
-        observe({          
-          if(is.null(input$calibrationIn)){}
-          else{
-              input$saveNists
-              input$DeleteNists
-              observe({
-                if(currentProject()$flag_Calib[grep(input$calibrationIn, currentProject()$calibrationsFiles)] == 0){
-                  
-                  output$Nist2 = renderUI({
-                    
-                    minB = currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$data[1,1]
-                    maxB = currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$data[dim(currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$data)[1],1]
-                    
-                    minP = currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$data[1,1]
-                    maxP = currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$data[dim(currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$data)[1],1]           
-                    
-                    
-                    if(temoin$temp[[1]] == 1){
-                      
-                      value1 = (maxB - minB)/6
-                      value2 = c((maxP - minP)*2/6,(maxP - minP)*4/6)
-                      step = currentProject()$calibrations[[1]]$setRep_pas()
-                      
-                    }
-                    if(temoin$temp[[1]] == 2){
-                      
-                      value1 = currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$bins
-                      value2 = currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$plat
-                      step = currentProject()$calibrations[[1]]$rep_pas 
-                    }   
-                    
-                    
-                    fluidRow(
-                      column(8, plotOutput("distPlot", height = '600px'),
-                             br(),
-                             column(1),
-                             column(11,
-                                    sliderInput("bins","Machine noise limits", value = value1, min = minB, max = maxB, step = step, width = '95%', round = T),
-                                    sliderInput("plat","Plateau limits", value = value2, min = minP, max = maxP,step = step, width = '95%')
-                             )
-                      ),
-                      column(4,plotOutput("distPlot2", height = '400px'),
-                             br(),
-                             box(
-                               background = "green",
-                               #title = list(icon("home"),"Welcome to element-R"),               
-                               height=150,
-                               width  = 15,
-                               column(6,
-                                      h4(icon("cubes"),"Choose Element to consider"),
-                                      selectInput("listeElem", label = "", choices =  currentProject()$listeElem, selected  = "Li7", width = '100%') 
-                               ), # column
-                               column(6,
-                                      h4(icon("area-chart"),"Choose Curve to plot"),
-                                      selectInput("CourbeNIST", label = "", choices =  c("Blanc","Brute", "Plateau","- Moyenne Blanc","> LOD", "Normalisé", "Sans Anomalie"), selected  = "Plateau", width = '100%') 
-                               )# column 
-                             ) # box
-                             
-                             
-                      ) #column  
-                      
-                    ) #fluidRow
-                  })
-                
-                  output$distPlot <- renderPlot({
-                    
-                    maxY <- max(currentProject()$calibrations[[1]]$rep_data[[1]]$data)
-                    
-                    minX <- min(currentProject()$calibrations[[1]]$rep_data[[1]]$data[,1])
-                    maxX <- max(currentProject()$calibrations[[1]]$rep_data[[1]]$data[,1])
-                    
-                    color <- rainbow(length(currentProject()$listeElem))
-                    
-                    plot(currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$data[,1], currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$data[,2],type ="b", ylab = "Nombre de coups", xlab = "Temps (s)", main = "Raw data", col = color[2], xlim = c(minX, maxX), ylim =c(0,maxY))
-                    lapply(3:length(currentProject()$listeElem), function(x){
-                      par(new = T)
-                      plot(currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$data[,1], currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$data[,x],type ="b", ylab = "", xlab = "", main = "", col = color[x], xlim = c(minX, maxX), ylim =c(0,maxY), axes = F)
-                    })
-                    legend((1-10/100)*maxX,(1+50/1000)*maxY, currentProject()$listeElem, color)
-                    
-                    # ici j'utilise une fonction des samples pour ne pas a la réécrire dans le script global
-                    Temp0$t <- currentProject()$samples[[1]]$lePlusProche(currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$data[,1],input$bins)[[2]]
-                    Temp1$t <- currentProject()$samples[[1]]$lePlusProche(currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$data[,1],input$plat[[1]])[[2]]
-                    Temp2$t <- currentProject()$samples[[1]]$lePlusProche(currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$data[,1],input$plat[[2]])[[2]]
-                    
-                    rect(-maxX,-maxY,currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$data[Temp0$t,1],(1+10/100)*maxY, col = "#FF000064", border = NA)
-                    
-                    rect(currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$data[Temp1$t,1],-maxY,currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$data[Temp2$t,1],(1+10/100)*maxY, col ="#8B735564", border = NA)
-                    
-                    abline(v = currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$data[Temp0$t,1], lty = "dashed", col = "red", lwd = 2)
-                    
-                    abline(v = currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$data[Temp1$t,1], lty = "dashed", col = "burlywood4", lwd = 2)
-                    abline(v = currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$data[Temp2$t,1], lty = "dashed", col = "burlywood4", lwd = 2)
-                    
-                    lapply(1:length(currentProject()$listeElem), function(x){points(currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$data[Temp0$t,1], currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$data[Temp0$t,x], cex = 3, col ="red")})
-                    lapply(1:length(currentProject()$listeElem), function(x){points(currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$data[Temp1$t,1], currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$data[Temp1$t,x], cex = 3, col ="#A6760F")})
-                    lapply(1:length(currentProject()$listeElem), function(x){points(currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$data[Temp2$t,1], currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$data[Temp2$t,x], cex = 3, col ="#A6760F")})
-                  })
-                  
-                  output$distPlot2 <- renderPlot({
-                    plot(dataPlot2$dat[,1], dataPlot2$dat[,grep(input$listeElem, colnames(dataPlot2$dat))],  type ="b", ylab = "Nombre de coups", xlab = "Temps (s)")  
-                  })
-                  
-                }
-                if(currentProject()$flag_Calib[grep(input$calibrationIn, currentProject()$calibrationsFiles)] == 1 ){                
-                  output$Nist2 = renderUI({NULL})
-                  
-                }
-              })
-
-          }
-          
+            if((flagTemp$temp[x] %% 2) == 0){
+              valid$temp[x] <- 0
+              currentProject()$setflagCalib(x,0)
+            }
+          })
         })
         
-          
-
-        
-        }
+      }
     }
-
-    })
-     
+    
+  })
+  
   #######################
   ## VERIF STANDARDS ####
   #######################
-               
+  
   Stand <- reactiveValues(dat = NULL)
+  validCorrection <- reactiveValues(temp = 0)
+  
+  correction <- reactiveValues(val = NULL)
+  tableauStat <- reactiveValues(temp = NULL)
   
   observe({
+    input$saveNists
+    input$DeleteNists
     if(is.null(currentProject())){}
-    if(is.null(input$calibrationIn)){}
+    if(is.null(input$calibrationIn)){}    
     else{
       observe({
-        input$saveNists
-        input$DeleteNists
-        
-        if(length(which(currentProject()$flag_Calib != 1)) == 0){
+        if(length(which(currentProject()$flag_Calib != 1)) == 0){  
           
-          
-          Stand <- reactiveValues(val = list.files(paste("Data/",input$folderProjectIn, "/Standart", sep=""))[1])      
-                    
           lapply(1:length(currentProject()$flag_Calib), function(x){currentProject()$calibrations[[1]]$rep_data[[x]]$setdata_calibFinal()})
           
           currentProject()$calibrations[[1]]$setrep_dataFinale() 
@@ -770,105 +1040,1244 @@ server <- function(input, output, session) {
           
           currentProject()$setSummaryNist(tab$dat)
           
+          tableauStat$temp <- currentProject()$correction()  
+          
           output$Text1 <- renderUI({
             
             fluidRow(
               box(width = 12,background = "olive", height = 100, 
                   column(4, 
-                         h2(icon("plug"),"Step 3. Verification derive machine")
-                  ), # column
-                  column(3,
-                         selectInput("choixElem", label = "", choices =  currentProject()$listeElem, selected  = "Li7", width = '100%')
-                  ), # column
-                  column(3,
-                         br(),
-                         actionButton("valid", "Valider")
+                         h2(icon("plug"),"Step 3. Machine drift verification")
                   )
+                  
               ) # box
             )
           })#output$Text1
           
-          output$Text2 <- renderUI({
-            fluidRow(
-              column(10,
-                     plotOutput("graph1")
-              ), # column
-              column(2,
-                     tableOutput('Tab')
-              )
-            )
+          NomNist <- reactiveValues(temp = geneR(choix = letterChoice, longueurDesirer = 5, combinaisonDesirer = length(currentProject()$listeElem)))
+          correction$val <- rep(F, length(currentProject()$listeElem))
+          preview <- reactiveValues(temp = geneR(choix = letterChoice, longueurDesirer = 6, combinaisonDesirer = length(currentProject()$listeElem)))
+          previewAction <- reactiveValues(temp = rep(0, length(currentProject()$listeElem)))
+          
+          observe({
+              if((validCorrection$temp%%2) == 0){
+                output$Text2 <- renderUI({
+                  box(width = 12,background = NULL, height = 100, 
+                      fluidRow(
+                        column(1,
+                               h4("Element")),
+                        column(1,
+                               h4("Norm.")),
+                        column(1,
+                               h4("Homosc.")),
+                        column(1,
+                               h4("Independance")),
+                        column(1,
+                               h4("Regression")),
+                        column(1,
+                               checkboxInput("CorrectAll",label = "Correct all", value = F)
+                        ),
+                        column(1,
+                               actionButton("validDrift", "Valider")
+                        )
+                        
+                      )
+                  )
+                  
+                })
+              }
+              if((validCorrection$temp%%2) == 1){
+                output$Text2 <- renderUI({
+                  box(width = 12,background = NULL, height = 100, 
+                      fluidRow(
+                        column(1,
+                               h4("Element")),
+                        column(1,
+                               h4("Norm.")),
+                        column(1,
+                               h4("Homosc.")),
+                        column(1,
+                               h4("Independance")),
+                        column(1,
+                               h4("Regression")),
+                        column(1
+                        ),
+                        column(1,
+                               actionButton("validDrift", "Delete")
+                        )
+                        
+                      )
+                  )
+                  
+                })
+              }
           })
           
-          output$Tab <- renderTable({
-            
-            tableau <- as.matrix(tab$dat[,grep(input$choixElem, colnames(tab$dat))])
-            
-            colnames(tableau) <- input$choixElem
-            
-            return(tableau)
-            
-          },digits = 4) 
           
-          output$graph1 <- renderPlot({
+          observe({
+            if(is.null(input$CorrectAll)){}
+            else{    
+              if((validCorrection$temp%%2) == 0){
+              output$Text2Bis <- renderUI({
+                
+                lapply(1:length(currentProject()$listeElem), function(x){
+                  
+                  plotname <- paste("plot", x, sep="")                  
+                  
+                  output[[plotname]] <- renderPlot({
+                    par(mfrow = c(1,4))
+                    plot(currentProject()$regressionModel[[x]])
+                  })
+                  
+                  plotname2 <- paste("plotSession", x, sep="")
+                  
+                  output[[plotname2]] <- renderPlot({
+                    
+                    min <- (max(tab$dat[1:length(currentProject()$flag_Calib),x]) - max(tab$dat[(length(currentProject()$flag_Calib)+1):(2*length(currentProject()$flag_Calib)),x]))*0.5
+                    
+                    max <- (max(tab$dat[1:length(currentProject()$flag_Calib),x]) + max(tab$dat[(length(currentProject()$flag_Calib)+1):(2*length(currentProject()$flag_Calib)),x]))*1.5
+                    
+                    PlotIC(currentProject()$calibrationsFiles,tab$dat[1:length(currentProject()$flag_Calib),x],tab$dat[(length(currentProject()$flag_Calib)+1):(2*length(currentProject()$flag_Calib)),x],lengthSeg = 0.1, xlim =c(1,length(currentProject()$flag_Calib)),ylim=c(min, max))
+                    
+                    abline(a = currentProject()$regressionModel[[x]]$coefficients[1], b= currentProject()$regressionModel[[x]]$coefficients[2], col ="red", lty = 2)
+                  })   
+                  
+                  if(is.na(tableauStat$temp[x,1]) | is.na(tableauStat$temp[x,2]) | is.na(tableauStat$temp[x,3]) | is.na(tableauStat$temp[x,4])){
+                    taille <- 100
+                    correction$val[x] <- F
+                    couleur <- c("color:black","color:black")
+                    
+                    box(width = 12,background = NULL, height = taille,
+                        column(8,
+                               fluidRow(
+                                 column(1,
+                                        h4(currentProject()$listeElem[x], style = couleur[1])),
+                                 column(1,
+                                        h4(round(tableauStat$temp[x,1],2), style = couleur[1])),
+                                 column(1,
+                                        h4(round(tableauStat$temp[x,2],2), style = couleur[1])),
+                                 column(1,
+                                        h4(round(tableauStat$temp[x,3],2), style = couleur[1])),
+                                 column(1,
+                                        h4(round(tableauStat$temp[x,4],2)), style = couleur[2]),
+                                 column(3,
+                                        actionButton(preview$temp[x],"Regression settings preview"))
+                               )
+                        )
+                        
+                    )
+                    
+                  }
+                  else{         
+                    if(tableauStat$temp[x,1] < 0.05 | tableauStat$temp[x,2] <0.05 | tableauStat$temp[x,3] < 0.05){
+                      if(tableauStat$temp[x,4] < 0.05){
+                        if(input$CorrectAll == T){
+                          if((previewAction$temp[x]%%2) ==1){
+                            taille <- 500
+                            correction$val[x] <- T
+                            couleur <- c("color:red","color:red")
+                            
+                            box(width = 12,background = NULL, height = taille,
+                                column(8,
+                                       fluidRow(
+                                         column(1,
+                                                h4(currentProject()$listeElem[x], style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,1],2), style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,2],2), style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,3],2), style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,4],2)), style = couleur[2]),
+                                         column(3,
+                                                actionButton(preview$temp[x],"Regression settings preview")),
+                                         column(1, 
+                                                checkboxInput(NomNist$temp[x],label = "Correct", value = correction$val[x]))
+                                       ),
+                                       plotOutput(plotname)  
+                                ),
+                                column(4,align = "center",
+                                       plotOutput(plotname2),
+                                       h4(paste0("regression: Y = ", round(currentProject()$regressionModel[[x]]$coefficients[1],3), " + X * ", round(currentProject()$regressionModel[[x]]$coefficients[2],3)))
+                                )
+                                
+                            )
+                          }
+                          else{
+                            taille <- 100
+                            correction$val[x] <- T
+                            couleur <- c("color:red","color:red")
+                            
+                            box(width = 12,background = NULL, height = taille,
+                                column(8,
+                                       fluidRow(
+                                         column(1,
+                                                h4(currentProject()$listeElem[x], style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,1],2), style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,2],2), style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,3],2), style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,4],2)), style = couleur[2]),
+                                         column(3,
+                                                actionButton(preview$temp[x],"Regression settings preview")),
+                                         column(1, 
+                                                checkboxInput(NomNist$temp[x],label = "Correct", value = correction$val[x]))
+                                       ) 
+                                )
+                                
+                            )
+                            
+                          }
+                        }
+                        else{
+                          if((previewAction$temp[x]%%2) ==1 ){
+                            taille <- 500
+                            correction$val[x] <- F
+                            couleur <- c("color:red","color:red")
+                            
+                            box(width = 12,background = NULL, height = taille,
+                                column(8,
+                                       fluidRow(
+                                         column(1,
+                                                h4(currentProject()$listeElem[x], style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,1],2), style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,2],2), style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,3],2), style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,4],2)), style = couleur[2]),
+                                         column(3,
+                                                actionButton(preview$temp[x],"Regression settings preview")),
+                                         column(1, 
+                                                checkboxInput(NomNist$temp[x],label = "Correct", value = correction$val[x]))
+                                       ),
+                                       plotOutput(plotname)  
+                                ),
+                                column(4,align = "center",
+                                       plotOutput(plotname2),
+                                       h4(paste0("regression: Y = ", round(currentProject()$regressionModel[[x]]$coefficients[1],3), " + X * ", round(currentProject()$regressionModel[[x]]$coefficients[2],3)))
+                                )
+                            )
+                          }
+                          else{
+                            taille <- 100
+                            correction$val[x] <- F
+                            couleur <- c("color:red","color:red")
+                            
+                            box(width = 12,background = NULL, height = taille,
+                                column(8,
+                                       fluidRow(
+                                         column(1,
+                                                h4(currentProject()$listeElem[x], style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,1],2), style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,2],2), style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,3],2), style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,4],2)), style = couleur[2]),
+                                         column(3,
+                                                actionButton(preview$temp[x],"Regression settings preview")),
+                                         column(1, 
+                                                checkboxInput(NomNist$temp[x],label = "Correct", value = correction$val[x]))
+                                       ) 
+                                )
+                                
+                            )
+                          }
+                        }
+                      }
+                      else{
+                        if(input$CorrectAll == T){
+                          if((previewAction$temp[x]%%2) ==1 ){
+                            taille <- 500
+                            correction$val[x] <- T
+                            couleur <- c("color:red","color:black")
+                            
+                            box(width = 12,background = NULL, height = taille,
+                                column(8,
+                                       fluidRow(
+                                         column(1,
+                                                h4(currentProject()$listeElem[x], style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,1],2), style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,2],2), style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,3],2), style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,4],2)), style = couleur[2]),
+                                         column(3,
+                                                actionButton(preview$temp[x],"Regression settings preview"))
+                                       ),
+                                       plotOutput(plotname)  
+                                ),
+                                column(4,align = "center",
+                                       plotOutput(plotname2),
+                                       h4(paste0("regression: Y = ", round(currentProject()$regressionModel[[x]]$coefficients[1],3), " + X * ", round(currentProject()$regressionModel[[x]]$coefficients[2],3)))
+                                )
+                                
+                            )
+                          }
+                          else{
+                            taille <- 100
+                            correction$val[x] <- T
+                            couleur <- c("color:red","color:black")
+                            
+                            box(width = 12,background = NULL, height = taille,
+                                column(8,
+                                       fluidRow(
+                                         column(1,
+                                                h4(currentProject()$listeElem[x], style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,1],2), style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,2],2), style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,3],2), style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,4],2)), style = couleur[2]),
+                                         column(3,
+                                                actionButton(preview$temp[x],"Regression settings preview"))
+                                       ) 
+                                )
+                                
+                            )
+                          }
+                        }
+                        else{
+                          if((previewAction$temp[x]%%2) ==1 ){
+                            taille <- 500
+                            correction$val[x] <- F
+                            couleur <- c("color:red","color:black")
+                            
+                            box(width = 12,background = NULL, height = taille,
+                                column(8,
+                                       fluidRow(
+                                         column(1,
+                                                h4(currentProject()$listeElem[x], style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,1],2), style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,2],2), style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,3],2), style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,4],2)), style = couleur[2]),
+                                         column(3,
+                                                actionButton(preview$temp[x],"Regression settings preview"))
+                                       ),
+                                       plotOutput(plotname)  
+                                ),
+                                column(4,align = "center",
+                                       plotOutput(plotname2),
+                                       h4(paste0("regression: Y = ", round(currentProject()$regressionModel[[x]]$coefficients[1],3), " + X * ", round(currentProject()$regressionModel[[x]]$coefficients[2],3)))
+                                )
+                                
+                            )
+                          }
+                          else{
+                            taille <- 100
+                            correction$val[x] <- F
+                            couleur <- c("color:red","color:black")
+                            
+                            box(width = 12,background = NULL, height = taille,
+                                column(8,
+                                       fluidRow(
+                                         column(1,
+                                                h4(currentProject()$listeElem[x], style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,1],2), style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,2],2), style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,3],2), style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,4],2)), style = couleur[2]),
+                                         column(3,
+                                                actionButton(preview$temp[x],"Regression settings preview"))
+                                       ) 
+                                )
+                                
+                            )
+                          }
+                        }
+                      }
+                    }
+                    else{
+                      if(tableauStat$temp[x,4] < 0.05){
+                        if(input$CorrectAll == T){
+                          if((previewAction$temp[x]%%2) ==1 ){
+                            taille <- 500
+                            correction$val[x] <- T
+                            couleur <- c("color:black","color:red")
+                            
+                            box(width = 12,background = NULL, height = taille,
+                                column(8,
+                                       fluidRow(
+                                         column(1,
+                                                h4(currentProject()$listeElem[x], style = couleur[2])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,1],2), style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,2],2), style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,3],2), style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,4],2)), style = couleur[2]),
+                                         column(3,
+                                                actionButton(preview$temp[x],"Regression settings preview")),
+                                         column(1, 
+                                                checkboxInput(NomNist$temp[x],label = "Correct", value = correction$val[x]))
+                                       ),
+                                       plotOutput(plotname)  
+                                ),
+                                column(4,align = "center",
+                                       plotOutput(plotname2),
+                                       h4(paste0("regression: Y = ", round(currentProject()$regressionModel[[x]]$coefficients[1],3), " + X * ", round(currentProject()$regressionModel[[x]]$coefficients[2],3)))
+                                )
+                                
+                            )
+                            
+                          }
+                          else{
+                            taille <- 100
+                            correction$val[x] <- T
+                            couleur <- c("color:black","color:red")
+                            
+                            box(width = 12,background = NULL, height = taille,
+                                column(8,
+                                       fluidRow(
+                                         column(1,
+                                                h4(currentProject()$listeElem[x], style = couleur[2])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,1],2), style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,2],2), style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,3],2), style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,4],2)), style = couleur[2]),
+                                         column(3,
+                                                actionButton(preview$temp[x],"Regression settings preview")),
+                                         column(1, 
+                                                checkboxInput(NomNist$temp[x],label = "Correct", value = correction$val[x]))
+                                       ) 
+                                )
+                                
+                            )
+                            
+                          }
+                        }
+                        else{
+                          if((previewAction$temp[x]%%2) ==1){
+                            taille <- 500
+                            correction$val[x] <- F
+                            couleur <- c("color:black","color:red")
+                            
+                            box(width = 12,background = NULL, height = taille,
+                                column(8,
+                                       fluidRow(
+                                         column(1,
+                                                h4(currentProject()$listeElem[x], style = couleur[2])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,1],2), style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,2],2), style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,3],2), style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,4],2)), style = couleur[2]),
+                                         column(3,
+                                                actionButton(preview$temp[x],"Regression settings preview")),
+                                         column(1, 
+                                                checkboxInput(NomNist$temp[x],label = "Correct", value = correction$val[x]))
+                                       ),
+                                       plotOutput(plotname)  
+                                ),
+                                column(4,align = "center",
+                                       plotOutput(plotname2),
+                                       h4(paste0("regression: Y = ", round(currentProject()$regressionModel[[x]]$coefficients[1],3), " + X * ", round(currentProject()$regressionModel[[x]]$coefficients[2],3)))
+                                )
+                                
+                            )
+                            
+                          }
+                          else{
+                            taille <- 100
+                            correction$val[x] <- F
+                            couleur <- c("color:black","color:red")
+                            
+                            box(width = 12,background = NULL, height = taille,
+                                column(8,
+                                       fluidRow(
+                                         column(1,
+                                                h4(currentProject()$listeElem[x], style = couleur[2])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,1],2), style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,2],2), style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,3],2), style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,4],2)), style = couleur[2]),
+                                         column(3,
+                                                actionButton(preview$temp[x],"Regression settings preview")),
+                                         column(1, 
+                                                checkboxInput(NomNist$temp[x],label = "Correct", value = correction$val[x]))
+                                       ) 
+                                )
+                                
+                            )
+                          }
+                        }
+                      }
+                      else{
+                        if(input$CorrectAll == T){
+                          if((previewAction$temp[x]%%2) ==1){
+                            taille <- 500
+                            correction$val[x] <- T
+                            couleur <- c("color:black","color:black")
+                            
+                            box(width = 12,background = NULL, height = taille,
+                                column(8,
+                                       fluidRow(
+                                         column(1,
+                                                h4(currentProject()$listeElem[x], style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,1],2), style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,2],2), style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,3],2), style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,4],2)), style = couleur[2]),
+                                         column(3,
+                                                actionButton(preview$temp[x],"Regression settings preview"))
+                                       ),
+                                       plotOutput(plotname)  
+                                ),
+                                column(4, align = "center",
+                                       plotOutput(plotname2),
+                                       h4(paste0("regression: Y = ", round(currentProject()$regressionModel[[x]]$coefficients[1],3), " + X * ", round(currentProject()$regressionModel[[x]]$coefficients[2],3)))
+                                )
+                                
+                            )
+                          }
+                          else{
+                            taille <- 100
+                            correction$val[x] <- T
+                            couleur <- c("color:black","color:black")
+                            
+                            box(width = 12,background = NULL, height = taille,
+                                column(8,
+                                       fluidRow(
+                                         column(1,
+                                                h4(currentProject()$listeElem[x], style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,1],2), style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,2],2), style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,3],2), style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,4],2)), style = couleur[2]),
+                                         column(3,
+                                                actionButton(preview$temp[x],"Regression settings preview"))
+                                       )
+                                )
+                                
+                            )
+                          }
+                        }
+                        else{
+                          if((previewAction$temp[x]%%2) ==1){  
+                            taille <- 500
+                            correction$val[x] <- F
+                            couleur <- c("color:black","color:black")
+                            
+                            box(width = 12,background = NULL, height = taille,
+                                column(8,
+                                       fluidRow(
+                                         column(1,
+                                                h4(currentProject()$listeElem[x], style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,1],2), style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,2],2), style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,3],2), style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,4],2)), style = couleur[2]),
+                                         column(3,
+                                                actionButton(preview$temp[x],"Regression settings preview"))
+                                       ),
+                                       plotOutput(plotname)  
+                                ),
+                                column(4, align = "center",
+                                       plotOutput(plotname2),
+                                       h4(paste0("regression: Y = ", round(currentProject()$regressionModel[[x]]$coefficients[1],3), " + X * ", round(currentProject()$regressionModel[[x]]$coefficients[2],3)))
+                                )
+                                
+                            )
+                          }
+                          else{
+                            taille <- 100
+                            correction$val[x] <- F
+                            couleur <- c("color:black","color:black")
+                            
+                            box(width = 12,background = NULL, height = taille,
+                                column(8,
+                                       fluidRow(
+                                         column(1,
+                                                h4(currentProject()$listeElem[x], style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,1],2), style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,2],2), style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,3],2), style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,4],2)), style = couleur[2]),
+                                         column(3,
+                                                actionButton(preview$temp[x],"Regression settings preview"))
+                                       )
+                                )
+                                
+                            )
+                          }
+                        }
+                      }
+                    }
+                    
+                  }
+                    
+
+
+                  
+                }) # eo lapply       
+              }) # eo output$Text2Bis 
+              }
+              if((validCorrection$temp%%2) == 1){
+                output$Text2Bis <- renderUI({
+                  
+                  lapply(1:length(currentProject()$listeElem), function(x){
+                    
+                    plotname <- paste("plot", x, sep="")                  
+                    
+                    output[[plotname]] <- renderPlot({
+                      par(mfrow = c(1,4))
+                      plot(currentProject()$regressionModel[[x]])
+                    })
+                    
+                    plotname2 <- paste("plotSession", x, sep="")
+                    
+                    output[[plotname2]] <- renderPlot({
+                      
+                      min <- (max(tab$dat[1:length(currentProject()$flag_Calib),x]) - max(tab$dat[(length(currentProject()$flag_Calib)+1):(2*length(currentProject()$flag_Calib)),x]))*0.5
+                      
+                      max <- (max(tab$dat[1:length(currentProject()$flag_Calib),x]) + max(tab$dat[(length(currentProject()$flag_Calib)+1):(2*length(currentProject()$flag_Calib)),x]))*1.5
+                      
+                      PlotIC(currentProject()$calibrationsFiles,tab$dat[1:length(currentProject()$flag_Calib),x],tab$dat[(length(currentProject()$flag_Calib)+1):(2*length(currentProject()$flag_Calib)),x],lengthSeg = 0.1, xlim =c(1,length(currentProject()$flag_Calib)),ylim=c(min, max))
+                      
+                      abline(a = currentProject()$regressionModel[[x]]$coefficients[1], b= currentProject()$regressionModel[[x]]$coefficients[2], col ="red", lty = 2)
+                    })  
+                  
+                  if(is.na(tableauStat$temp[x,1]) | is.na(tableauStat$temp[x,2]) | is.na(tableauStat$temp[x,3]) | is.na(tableauStat$temp[x,4])){
+                    taille <- 100
+                    couleur <- c("color:black","color:black")
+                    
+                    box(width = 12,background = NULL, height = taille,
+                        column(8,
+                               fluidRow(
+                                 column(1,
+                                        h4(currentProject()$listeElem[x], style = couleur[1])),
+                                 column(1,
+                                        h4(round(tableauStat$temp[x,1],2), style = couleur[1])),
+                                 column(1,
+                                        h4(round(tableauStat$temp[x,2],2), style = couleur[1])),
+                                 column(1,
+                                        h4(round(tableauStat$temp[x,3],2), style = couleur[1])),
+                                 column(1,
+                                        h4(round(tableauStat$temp[x,4],2)), style = couleur[2]),
+                                 column(3,
+                                        actionButton(preview$temp[x],"Regression settings preview"))
+                               )
+                        )
+                        
+                    )
+                    
+                  }
+                  else{         
+                    if(tableauStat$temp[x,1] < 0.05 | tableauStat$temp[x,2] <0.05 | tableauStat$temp[x,3] < 0.05){
+                      if(tableauStat$temp[x,4] < 0.05){
+                        if(input$CorrectAll == T){
+                          if((previewAction$temp[x]%%2) ==1){
+                            taille <- 500
+                            couleur <- c("color:red","color:red")
+                            
+                            box(width = 12,background = NULL, height = taille,
+                                column(8,
+                                       fluidRow(
+                                         column(1,
+                                                h4(currentProject()$listeElem[x], style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,1],2), style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,2],2), style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,3],2), style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,4],2)), style = couleur[2]),
+                                         column(3,
+                                                actionButton(preview$temp[x],"Regression settings preview"))
+                                       ),
+                                       plotOutput(plotname)  
+                                ),
+                                column(4,align = "center",
+                                       plotOutput(plotname2),
+                                       h4(paste0("regression: Y = ", round(currentProject()$regressionModel[[x]]$coefficients[1],3), " + X * ", round(currentProject()$regressionModel[[x]]$coefficients[2],3)))
+                                )
+                                
+                            )
+                          }
+                          else{
+                            taille <- 100
+                            couleur <- c("color:red","color:red")
+                            
+                            box(width = 12,background = NULL, height = taille,
+                                column(8,
+                                       fluidRow(
+                                         column(1,
+                                                h4(currentProject()$listeElem[x], style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,1],2), style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,2],2), style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,3],2), style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,4],2)), style = couleur[2]),
+                                         column(3,
+                                                actionButton(preview$temp[x],"Regression settings preview"))
+                                       ) 
+                                )
+                                
+                            )
+                            
+                          }
+                        }
+                        else{
+                          if((previewAction$temp[x]%%2) ==1 ){
+                            taille <- 500
+                            couleur <- c("color:red","color:red")
+                            
+                            box(width = 12,background = NULL, height = taille,
+                                column(8,
+                                       fluidRow(
+                                         column(1,
+                                                h4(currentProject()$listeElem[x], style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,1],2), style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,2],2), style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,3],2), style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,4],2)), style = couleur[2]),
+                                         column(3,
+                                                actionButton(preview$temp[x],"Regression settings preview"))
+                                       ),
+                                       plotOutput(plotname)  
+                                ),
+                                column(4,align = "center",
+                                       plotOutput(plotname2),
+                                       h4(paste0("regression: Y = ", round(currentProject()$regressionModel[[x]]$coefficients[1],3), " + X * ", round(currentProject()$regressionModel[[x]]$coefficients[2],3)))
+                                )
+                            )
+                          }
+                          else{
+                            taille <- 100
+                            couleur <- c("color:red","color:red")
+                            
+                            box(width = 12,background = NULL, height = taille,
+                                column(8,
+                                       fluidRow(
+                                         column(1,
+                                                h4(currentProject()$listeElem[x], style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,1],2), style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,2],2), style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,3],2), style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,4],2)), style = couleur[2]),
+                                         column(3,
+                                                actionButton(preview$temp[x],"Regression settings preview"))
+                                       ) 
+                                )
+                                
+                            )
+                          }
+                        }
+                      }
+                      else{
+                        if(input$CorrectAll == T){
+                          if((previewAction$temp[x]%%2) ==1 ){
+                            taille <- 500
+                            couleur <- c("color:red","color:black")
+                            
+                            box(width = 12,background = NULL, height = taille,
+                                column(8,
+                                       fluidRow(
+                                         column(1,
+                                                h4(currentProject()$listeElem[x], style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,1],2), style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,2],2), style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,3],2), style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,4],2)), style = couleur[2]),
+                                         column(3,
+                                                actionButton(preview$temp[x],"Regression settings preview"))
+                                       ),
+                                       plotOutput(plotname)  
+                                ),
+                                column(4,align = "center",
+                                       plotOutput(plotname2),
+                                       h4(paste0("regression: Y = ", round(currentProject()$regressionModel[[x]]$coefficients[1],3), " + X * ", round(currentProject()$regressionModel[[x]]$coefficients[2],3)))
+                                )
+                                
+                            )
+                          }
+                          else{
+                            taille <- 100
+                            couleur <- c("color:red","color:black")
+                            
+                            box(width = 12,background = NULL, height = taille,
+                                column(8,
+                                       fluidRow(
+                                         column(1,
+                                                h4(currentProject()$listeElem[x], style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,1],2), style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,2],2), style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,3],2), style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,4],2)), style = couleur[2]),
+                                         column(3,
+                                                actionButton(preview$temp[x],"Regression settings preview"))
+                                       ) 
+                                )
+                                
+                            )
+                          }
+                        }
+                        else{
+                          if((previewAction$temp[x]%%2) ==1 ){
+                            taille <- 500
+                            couleur <- c("color:red","color:black")
+                            
+                            box(width = 12,background = NULL, height = taille,
+                                column(8,
+                                       fluidRow(
+                                         column(1,
+                                                h4(currentProject()$listeElem[x], style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,1],2), style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,2],2), style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,3],2), style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,4],2)), style = couleur[2]),
+                                         column(3,
+                                                actionButton(preview$temp[x],"Regression settings preview"))
+                                       ),
+                                       plotOutput(plotname)  
+                                ),
+                                column(4,align = "center",
+                                       plotOutput(plotname2),
+                                       h4(paste0("regression: Y = ", round(currentProject()$regressionModel[[x]]$coefficients[1],3), " + X * ", round(currentProject()$regressionModel[[x]]$coefficients[2],3)))
+                                )
+                                
+                            )
+                          }
+                          else{
+                            taille <- 100
+                            couleur <- c("color:red","color:black")
+                            
+                            box(width = 12,background = NULL, height = taille,
+                                column(8,
+                                       fluidRow(
+                                         column(1,
+                                                h4(currentProject()$listeElem[x], style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,1],2), style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,2],2), style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,3],2), style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,4],2)), style = couleur[2]),
+                                         column(3,
+                                                actionButton(preview$temp[x],"Regression settings preview"))
+                                       ) 
+                                )
+                                
+                            )
+                          }
+                        }
+                      }
+                    }
+                    else{
+                      if(tableauStat$temp[x,4] < 0.05){
+                        if(input$CorrectAll == T){
+                          if((previewAction$temp[x]%%2) ==1 ){
+                            taille <- 500
+                            couleur <- c("color:black","color:red")
+                            
+                            box(width = 12,background = NULL, height = taille,
+                                column(8,
+                                       fluidRow(
+                                         column(1,
+                                                h4(currentProject()$listeElem[x], style = couleur[2])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,1],2), style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,2],2), style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,3],2), style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,4],2)), style = couleur[2]),
+                                         column(3,
+                                                actionButton(preview$temp[x],"Regression settings preview"))
+                                       ),
+                                       plotOutput(plotname)  
+                                ),
+                                column(4,align = "center",
+                                       plotOutput(plotname2),
+                                       h4(paste0("regression: Y = ", round(currentProject()$regressionModel[[x]]$coefficients[1],3), " + X * ", round(currentProject()$regressionModel[[x]]$coefficients[2],3)))
+                                )
+                                
+                            )
+                            
+                          }
+                          else{
+                            taille <- 100
+                            couleur <- c("color:black","color:red")
+                            
+                            box(width = 12,background = NULL, height = taille,
+                                column(8,
+                                       fluidRow(
+                                         column(1,
+                                                h4(currentProject()$listeElem[x], style = couleur[2])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,1],2), style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,2],2), style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,3],2), style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,4],2)), style = couleur[2]),
+                                         column(3,
+                                                actionButton(preview$temp[x],"Regression settings preview"))
+                                       ) 
+                                )
+                                
+                            )
+                            
+                          }
+                        }
+                        else{
+                          if((previewAction$temp[x]%%2) ==1){
+                            taille <- 500
+                            couleur <- c("color:black","color:red")
+                            
+                            box(width = 12,background = NULL, height = taille,
+                                column(8,
+                                       fluidRow(
+                                         column(1,
+                                                h4(currentProject()$listeElem[x], style = couleur[2])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,1],2), style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,2],2), style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,3],2), style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,4],2)), style = couleur[2]),
+                                         column(3,
+                                                actionButton(preview$temp[x],"Regression settings preview"))
+                                       ),
+                                       plotOutput(plotname)  
+                                ),
+                                column(4,align = "center",
+                                       plotOutput(plotname2),
+                                       h4(paste0("regression: Y = ", round(currentProject()$regressionModel[[x]]$coefficients[1],3), " + X * ", round(currentProject()$regressionModel[[x]]$coefficients[2],3)))
+                                )
+                                
+                            )
+                            
+                          }
+                          else{
+                            taille <- 100
+                            couleur <- c("color:black","color:red")
+                            
+                            box(width = 12,background = NULL, height = taille,
+                                column(8,
+                                       fluidRow(
+                                         column(1,
+                                                h4(currentProject()$listeElem[x], style = couleur[2])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,1],2), style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,2],2), style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,3],2), style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,4],2)), style = couleur[2]),
+                                         column(3,
+                                                actionButton(preview$temp[x],"Regression settings preview"))
+                                       ) 
+                                )
+                                
+                            )
+                          }
+                        }
+                      }
+                      else{
+                        if(input$CorrectAll == T){
+                          if((previewAction$temp[x]%%2) ==1){
+                            taille <- 500
+                            couleur <- c("color:black","color:black")
+                            
+                            box(width = 12,background = NULL, height = taille,
+                                column(8,
+                                       fluidRow(
+                                         column(1,
+                                                h4(currentProject()$listeElem[x], style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,1],2), style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,2],2), style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,3],2), style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,4],2)), style = couleur[2]),
+                                         column(3,
+                                                actionButton(preview$temp[x],"Regression settings preview"))
+                                       ),
+                                       plotOutput(plotname)  
+                                ),
+                                column(4, align = "center",
+                                       plotOutput(plotname2),
+                                       h4(paste0("regression: Y = ", round(currentProject()$regressionModel[[x]]$coefficients[1],3), " + X * ", round(currentProject()$regressionModel[[x]]$coefficients[2],3)))
+                                )
+                                
+                            )
+                          }
+                          else{
+                            taille <- 100
+                            couleur <- c("color:black","color:black")
+                            
+                            box(width = 12,background = NULL, height = taille,
+                                column(8,
+                                       fluidRow(
+                                         column(1,
+                                                h4(currentProject()$listeElem[x], style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,1],2), style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,2],2), style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,3],2), style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,4],2)), style = couleur[2]),
+                                         column(3,
+                                                actionButton(preview$temp[x],"Regression settings preview"))
+                                       )
+                                )
+                                
+                            )
+                          }
+                        }
+                        else{
+                          if((previewAction$temp[x]%%2) ==1){  
+                            taille <- 500
+                            couleur <- c("color:black","color:black")
+                            
+                            box(width = 12,background = NULL, height = taille,
+                                column(8,
+                                       fluidRow(
+                                         column(1,
+                                                h4(currentProject()$listeElem[x], style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,1],2), style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,2],2), style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,3],2), style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,4],2)), style = couleur[2]),
+                                         column(3,
+                                                actionButton(preview$temp[x],"Regression settings preview"))
+                                       ),
+                                       plotOutput(plotname)  
+                                ),
+                                column(4, align = "center",
+                                       plotOutput(plotname2),
+                                       h4(paste0("regression: Y = ", round(currentProject()$regressionModel[[x]]$coefficients[1],3), " + X * ", round(currentProject()$regressionModel[[x]]$coefficients[2],3)))
+                                )
+                                
+                            )
+                          }
+                          else{
+                            taille <- 100
+                            couleur <- c("color:black","color:black")
+                            
+                            box(width = 12,background = NULL, height = taille,
+                                column(8,
+                                       fluidRow(
+                                         column(1,
+                                                h4(currentProject()$listeElem[x], style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,1],2), style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,2],2), style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,3],2), style = couleur[1])),
+                                         column(1,
+                                                h4(round(tableauStat$temp[x,4],2)), style = couleur[2]),
+                                         column(3,
+                                                actionButton(preview$temp[x],"Regression settings preview"))
+                                       )
+                                )
+                                
+                            )
+                          }
+                        }
+                      }
+                    }
+                    
+                  }
+                  
+                  })
+                  
+                })
+            }
+            } 
+          })       
+          
+          observe({
             
-            min <- (max(tab$dat[1:length(currentProject()$flag_Calib),grep(input$choixElem, colnames(tab$dat))]) - max(tab$dat[(length(currentProject()$flag_Calib)+1):(2*length(currentProject()$flag_Calib)),grep(input$choixElem, colnames(tab$dat))]))*0.5
-            
-            max <- (max(tab$dat[1:length(currentProject()$flag_Calib),grep(input$choixElem, colnames(tab$dat))]) + max(tab$dat[(length(currentProject()$flag_Calib)+1):(2*length(currentProject()$flag_Calib)),grep(input$choixElem, colnames(tab$dat))]))*1.5
-            
-            PlotIC(currentProject()$calibrationsFiles,tab$dat[1:length(currentProject()$flag_Calib),grep(input$choixElem, colnames(tab$dat))],tab$dat[(length(currentProject()$flag_Calib)+1):(2*length(currentProject()$flag_Calib)),grep(input$choixElem, colnames(tab$dat))],lengthSeg = 0.1, xlim =c(1,length(currentProject()$flag_Calib)),ylim=c(min, max))
+            lapply(1:length(currentProject()$listeElem), function(x){
+              
+              if(is.null(eval(parse(text = paste0("input$",preview$temp[x]))))){}
+              else{
+                if(eval(parse(text = paste0("input$",preview$temp[x])))>0){
+                  isolate({                
+                    previewAction$temp[x] <- previewAction$temp[x]+1
+                  })
+                }
+              }
+              
+            })
             
           })
           
           observe({
-            if(is.null(input$valid)){}
+            if(is.null(input$validDrift)){}
             else{
-              if(input$valid > 0){
-                
-                output$Text3 <- renderUI({
-                  box(background = "olive", width = 12, height = 100,
-                      column(4,
-                             h2("Step 4. conversion coups/concentrations")
-                      ), # column 
-                      column(3, 
-                             h2(paste0("Standard chargé : ", currentProject()$EtalonName))
-                      ),
-                      column(3,
-                             br(),
-                             actionButton("validEtalon", "Save"))
-                      # column
-                  ) # box
-                })
-                
-                output$tableEtalon <- renderTable({
-                  return(currentProject()$EtalonData)
-                }, digits = 5)
-              }
+              isolate({
+                if(input$validDrift > 0){
+                  
+                  for (i in 1: length(currentProject()$listeElem)){
+                    
+                    if(is.null(eval(parse(text = paste0("input$",NomNist$temp[i]))))){correction$val[i] <- FALSE}
+                    else(
+                      
+                      isolate(correction$val[i] <- eval(parse(text = paste0("input$",NomNist$temp[i]))))
+                      
+                      
+                    )
+                  }                  
+                }
+              })
+              
             }
           })
           
+          observe({
+            if(is.null(input$validDrift)){}
+            else{
+              isolate({
+                if((input$validDrift%%2) == 0){
+                  validCorrection$temp <- validCorrection$temp
+                }
+                if((input$validDrift%%2) == 1){
+                  validCorrection$temp <- validCorrection$temp + 1
+                }
+              })
+              
+            }
+          })
+          
+          
+          
         }
-        
         else{
           
           output$Text1 <- renderUI({NULL})#output$Text1
           
           output$Text2 <- renderUI({NULL})#output$Text2
           
+          output$Text2Bis <- renderUI({NULL}) # output$Text2Bis
+          
         }
       })
-
+      
       
     }
     
-  })
+  })  
   
+  machineCorrection <- reactiveValues(temp = list())
   observe({
-    if(is.null(input$validEtalon)){}
-    else{
-      if(input$validEtalon > 0){
+      if((validCorrection$temp%%2) == 1){    
+        print("save")
         lapply(1:length(currentProject()$samplesFiles), function(x){lapply(1:length(currentProject()$samples[[x]]$rep_data), function(t){currentProject()$samples[[x]]$rep_data[[t]]$setstandard(currentProject()$EtalonData)})})
-      }
-    }    
+        
+        lapply(1:length(currentProject()$listeElem), function(x){
+          if(is.na(tableauStat$temp[x,4])){
+            machineCorrection$temp[[x]] <- c(currentProject()$SummaryNist[(nrow(currentProject()$SummaryNist)-1),x],0)
+          }
+          else{
+            if(tableauStat$temp[x,4] < 0.05 & correction$val[x] == T){
+              machineCorrection$temp[[x]] <-  currentProject()$regressionModel[[x]]$coefficients[1:2]
+            }
+            else{
+              machineCorrection$temp[[x]] <- c(currentProject()$SummaryNist[(nrow(currentProject()$SummaryNist)-1),x],0)
+            }
+            
+          }
+          
+          
+        })
+        currentProject()$setCorrection(machineCorrection$temp)
+      }    
   })
   
   #######################
@@ -877,24 +2286,21 @@ server <- function(input, output, session) {
   
   temoinSample <- reactiveValues(temp = NULL)
   
-  observe({    
-    if(is.null(input$validEtalon)){}
-    
-    else{
-      if(input$validEtalon == 0){
-      
-      output$sample1 <- renderUI({NULL})
-      
-      output$sample2 <- renderUI({NULL})  
-      
-      output$sample3 <- renderUI({NULL})
-      
-      output$sample4 <- renderUI({NULL})   
-      
-      output$Sample5 = renderUI({NULL})      
-      
-    }
-      if(input$validEtalon > 0){
+  observe({
+      if((validCorrection$temp%%2) == 0){
+        
+        output$sample1 <- renderUI({NULL})
+        
+        output$sample2 <- renderUI({NULL})  
+        
+        output$sample3 <- renderUI({NULL})
+        
+        output$sample4 <- renderUI({NULL})   
+        
+        output$Sample5 = renderUI({NULL})      
+        
+      }
+      if((validCorrection$temp%%2) == 1){
         
         output$sample1 <- renderUI({
           h2("Step 5. Filtering data from samples")       
@@ -906,12 +2312,24 @@ server <- function(input, output, session) {
         
         output$sample3 <- renderUI({
           selectInput("SampleIn2", NULL, as.matrix(currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files), multiple = F, width = '100%' )
-        })
+        })        
         
         output$sample4 <- renderUI({
-          p(actionButton("ValiderSample", "Save"),
-            actionButton("DeleteSample", "Delete")
-          )          
+          actionButton("ValiderSample", "Save")       
+        })
+        
+        values <- reactiveValues(tac = 0)
+        
+        output$sample6 <- renderUI({
+          totalActionCount <- as.numeric(input$ValiderSample)
+          if (input$ValiderSample > 0) {
+            if(isolate(values$tac < totalActionCount)){
+              isolate(values$tac <- totalActionCount)
+              invalidateLater(3000, session)
+              return(h2("Validated !!"))
+            }else{
+            }
+          }
         })
         
         Temp0S <- reactiveValues(t = NULL)
@@ -919,6 +2337,99 @@ server <- function(input, output, session) {
         Temp2S <- reactiveValues(t = NULL)
         
         dataPlot2Sample <- reactiveValues(datS = NULL) 
+        
+        output$Sample5 = renderUI({
+          
+          minBS = currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[1,1]
+          maxBS = currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[dim(currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data)[1],1]
+          
+          minPS = currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[1,1]
+          maxPS = currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[dim(currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data)[1],1]
+          
+          
+          if(temoin$temp[[1]] == 1){
+            
+            value1S = (maxBS - minBS)/6
+            value2S = c((maxPS - minPS)*2/6,(maxPS - minPS)*4/6)
+            step = currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$setRep_pas()
+          }
+          if(temoin$temp[[1]] == 2){
+            
+            value1S = currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$binsSample
+            value2S = currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$platSample
+            step = currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_pas 
+          }   
+          
+          
+          fluidRow(
+            column(8, plotOutput("distPlotSample", height = '600px'),
+                   br(),
+                   column(1),
+                   column(11,
+                          sliderInput("binsSample","Limites du Blanc", value = value1S, min = minBS, max = maxBS, step = step, width = '95%'),
+                          sliderInput("platSample","Limites du plateau", value = value2S, min = minPS, max = maxPS, step = step, width = '95%')
+                   )
+            ),
+            column(4,plotOutput("distPlot2Sample", height = '400px'),
+                   br(),
+                   box(
+                     background = "navy",            
+                     height=150,
+                     width  = 15,
+                     column(6,
+                            h4(icon("cubes"),"Choose Element to consider"),
+                            selectInput("listeElemSample", label = "", choices =  currentProject()$listeElem, selected  = "Li7", width = '100%') 
+                     ), # column
+                     column(6,
+                            h4(icon("area-chart"),"Choose Curve to plot"),
+                            selectInput("CourbeSample", label = "", choices =  c("Blanc","Brute", "Plateau","- Moyenne Blanc","> LOD", "Normalisé", "Sans Anomalie", "Concentration", "Conc. corrected"), selected  = "Plateau", width = '100%') 
+                     )# column 
+                   ) # box
+                   
+                   
+            ) #column  
+            
+          ) #fluidRow
+        })
+        
+        output$distPlotSample <- renderPlot({
+          
+          maxY <- max(currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data)
+          
+          minX <- min(currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[,1])
+          maxX <- max(currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[,1])
+          
+          color <- rainbow(length(currentProject()$listeElem))
+          
+          plot(currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[,1], currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[,2],type ="b", ylab = "Nombre de coups", xlab = "Temps (s)", main = "Raw data", col = color[2], xlim = c(minX, maxX), ylim =c(0,maxY))
+          lapply(3:length(currentProject()$listeElem), function(x){
+            par(new = T)
+            plot(currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[,1], currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[,x],type ="b", ylab = "", xlab = "", main = "", col = color[x], xlim = c(minX, maxX), ylim =c(0,maxY), axes = F)
+          })
+          legend((1-10/100)*maxX,(1+50/1000)*maxY, currentProject()$listeElem, color)
+          
+          Temp0S$t <- currentProject()$samples[[1]]$lePlusProche(currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[,1],input$binsSample)[[2]]
+          Temp1S$t <- currentProject()$samples[[1]]$lePlusProche(currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[,1],input$platSample[[1]])[[2]]
+          Temp2S$t <- currentProject()$samples[[1]]$lePlusProche(currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[,1],input$platSample[[2]])[[2]]
+          
+          rect(-maxX,-maxY,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[Temp0S$t,1],(1+10/100)*maxY, col = "#FF000064", border = NA)
+          
+          rect(currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[Temp1S$t,1],-maxY,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[Temp2S$t,1],(1+10/100)*maxY, col ="#8B735564", border = NA)
+          
+          abline(v = currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[Temp0S$t,1], lty = "dashed", col = ("red"), lwd = 2)
+          
+          abline(v = currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[Temp1S$t,1], lty = "dashed", col = ("burlywood4"), lwd = 2)
+          abline(v = currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[Temp2S$t,1], lty = "dashed", col = ("burlywood4"), lwd = 2)
+          
+          lapply(1:length(currentProject()$listeElem), function(x){points(currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[Temp0S$t,1], currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[Temp0S$t,x], cex = 3, col ="red")})
+          lapply(1:length(currentProject()$listeElem), function(x){points(currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[Temp1S$t,1], currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[Temp1S$t,x], cex = 3, col ="#A6760F")})
+          lapply(1:length(currentProject()$listeElem), function(x){points(currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[Temp2S$t,1], currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[Temp2S$t,x], cex = 3, col ="#A6760F")})
+          
+        })
+        
+        output$distPlot2Sample <- renderPlot({
+          plot(dataPlot2Sample$datS[,1], dataPlot2Sample$datS[,grep(input$listeElemSample, colnames(dataPlot2Sample$datS))],  type ="b", ylab = "Nombre de coups", xlab = "Temps (s)")  
+        })
         
         observe({
           if(is.null(currentProject())){}
@@ -929,8 +2440,8 @@ server <- function(input, output, session) {
             if(length(grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)) == 0){}
             else{
               currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$setVector(bins = currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[Temp0S$t,1], plat = c(currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[Temp1S$t,1],currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[Temp2S$t,1]))
-              dataPlot2Sample$datS <- currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$getData(input$CourbeSample,  bins = currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[Temp0S$t,1], plat = c(currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[Temp1S$t,1],currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[Temp2S$t,1]), SimNist = currentProject()$SummaryNist[(nrow(currentProject()$SummaryNist)-1),])        
-              }
+              dataPlot2Sample$datS <- currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$getData(input$CourbeSample,  bins = currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[Temp0S$t,1], plat = c(currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[Temp1S$t,1],currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[Temp2S$t,1]), nom = input$SampleIn2, SimNist = currentProject()$SummaryNist[(nrow(currentProject()$SummaryNist)-1),], summarySession = currentProject()$sessionSummary, model = currentProject()$machineCorrection)        
+            }
           } 
         }) # observe
         
@@ -940,152 +2451,14 @@ server <- function(input, output, session) {
             input$ValiderSample
             isolate({
               if(input$ValiderSample >0){
-                  currentProject()$setflagSample(grep(input$SampleIn,currentProject()$samplesFiles), grep(input$SampleIn2, currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files),TRUE)
-                  currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$setBins(currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[Temp0S$t,1])
-                  currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$setPlat(c(currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[Temp1S$t,1],currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[Temp2S$t,1]))
-                  currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2, currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$setDataDesanomaliseConc(currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[Temp0S$t,1], c(currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[Temp1S$t,1],currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[Temp2S$t,1]), SimNist = currentProject()$SummaryNist[(nrow(currentProject()$SummaryNist)-1),])
-               }  
+                currentProject()$setflagSample(grep(input$SampleIn,currentProject()$samplesFiles), grep(input$SampleIn2, currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files),TRUE)
+                currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$setBins(currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[Temp0S$t,1])
+                currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$setPlat(c(currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[Temp1S$t,1],currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[Temp2S$t,1]))
+                currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2, currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$setDataDesanomaliseConcCorr(bins = currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[Temp0S$t,1], plat = c(currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[Temp1S$t,1],currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[Temp2S$t,1]), nom = input$SampleIn2, summarySession = currentProject()$sessionSummary, model = currentProject()$machineCorrection)
+              }  
             })
-            } 
+          } 
         }) # observe
-        
-        observe({
-          if(is.null(input$DeleteSample)){}
-          else{
-            input$DeleteSample
-            isolate({             
-              if(input$DeleteSample >0){
-                  currentProject()$setflagSample(grep(isolate(input$SampleIn),currentProject()$samplesFiles), grep(isolate(input$SampleIn2), currentProject()$samples[[grep(isolate(input$SampleIn),currentProject()$samplesFiles)]]$rep_Files),FALSE)
-                  }
-            })
-
-          }
-
-          }) # observe
-
-        observe({
-          if(is.null(currentProject())){}
-          if(is.null(input$SampleIn)){}
-          if(is.null(input$SampleIn2)){}
-          
-          else{
-            input$ValiderSample
-            input$DeleteSample
-            input$SampleIn2
-            input$SampleIn
-            observe({
-              if(length(currentProject()$flag_Sample[[grep(input$SampleIn,currentProject()$samplesFiles)]][grep(input$SampleIn2, currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]) == 0){}
-              else{
-                if(currentProject()$flag_Sample[[grep(input$SampleIn,currentProject()$samplesFiles)]][grep(input$SampleIn2, currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)] == FALSE){
-                  
-                  output$Sample5 = renderUI({
-                    
-                    minBS = currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[1,1]
-                    maxBS = currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[dim(currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data)[1],1]
-                    
-                    minPS = currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[1,1]
-                    maxPS = currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[dim(currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data)[1],1]
-                    
-                    
-                    if(temoin$temp[[1]] == 1){
-                      
-                      value1S = (maxBS - minBS)/6
-                      value2S = c((maxPS - minPS)*2/6,(maxPS - minPS)*4/6)
-                      step = currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$setRep_pas()
-                    }
-                    if(temoin$temp[[1]] == 2){
-                      
-                      value1S = currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$binsSample
-                      value2S = currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$platSample
-                      step = currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_pas 
-                    }   
-                    
-                    
-                    fluidRow(
-                      column(8, plotOutput("distPlotSample", height = '600px'),
-                             br(),
-                             column(1),
-                             column(11,
-                                    sliderInput("binsSample","Limites du Blanc", value = value1S, min = minBS, max = maxBS, step = step, width = '95%'),
-                                    sliderInput("platSample","Limites du plateau", value = value2S, min = minPS, max = maxPS, step = step, width = '95%')
-                             )
-                      ),
-                      column(4,plotOutput("distPlot2Sample", height = '400px'),
-                             br(),
-                             box(
-                               background = "navy",            
-                               height=150,
-                               width  = 15,
-                               column(6,
-                                      h4(icon("cubes"),"Choose Element to consider"),
-                                      selectInput("listeElemSample", label = "", choices =  currentProject()$listeElem, selected  = "Li7", width = '100%') 
-                               ), # column
-                               column(6,
-                                      h4(icon("area-chart"),"Choose Curve to plot"),
-                                      selectInput("CourbeSample", label = "", choices =  c("Blanc","Brute", "Plateau","- Moyenne Blanc","> LOD", "Normalisé", "Sans Anomalie", "Concentration"), selected  = "Plateau", width = '100%') 
-                               )# column 
-                             ) # box
-                             
-                             
-                      ) #column  
-                      
-                    ) #fluidRow
-                  })
-                  
-                  output$distPlotSample <- renderPlot({
-                    
-                    maxY <- max(currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data)
-                    
-                    minX <- min(currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[,1])
-                    maxX <- max(currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[,1])
-                    
-                    color <- rainbow(length(currentProject()$listeElem))
-                    
-                    plot(currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[,1], currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[,2],type ="b", ylab = "Nombre de coups", xlab = "Temps (s)", main = "Raw data", col = color[2], xlim = c(minX, maxX), ylim =c(0,maxY))
-                    lapply(3:length(currentProject()$listeElem), function(x){
-                      par(new = T)
-                      plot(currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[,1], currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[,x],type ="b", ylab = "", xlab = "", main = "", col = color[x], xlim = c(minX, maxX), ylim =c(0,maxY), axes = F)
-                    })
-                    legend((1-10/100)*maxX,(1+50/1000)*maxY, currentProject()$listeElem, color)
-                    
-                    Temp0S$t <- currentProject()$samples[[1]]$lePlusProche(currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[,1],input$binsSample)[[2]]
-                    Temp1S$t <- currentProject()$samples[[1]]$lePlusProche(currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[,1],input$platSample[[1]])[[2]]
-                    Temp2S$t <- currentProject()$samples[[1]]$lePlusProche(currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[,1],input$platSample[[2]])[[2]]
-                                        
-                    rect(-maxX,-maxY,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[Temp0S$t,1],(1+10/100)*maxY, col = "#FF000064", border = NA)
-                    
-                    rect(currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[Temp1S$t,1],-maxY,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[Temp2S$t,1],(1+10/100)*maxY, col ="#8B735564", border = NA)
-                    
-                    abline(v = currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[Temp0S$t,1], lty = "dashed", col = ("red"), lwd = 2)
-                    
-                    abline(v = currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[Temp1S$t,1], lty = "dashed", col = ("burlywood4"), lwd = 2)
-                    abline(v = currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[Temp2S$t,1], lty = "dashed", col = ("burlywood4"), lwd = 2)
-                    
-                    lapply(1:length(currentProject()$listeElem), function(x){points(currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[Temp0S$t,1], currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[Temp0S$t,x], cex = 3, col ="red")})
-                    lapply(1:length(currentProject()$listeElem), function(x){points(currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[Temp1S$t,1], currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[Temp1S$t,x], cex = 3, col ="#A6760F")})
-                    lapply(1:length(currentProject()$listeElem), function(x){points(currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[Temp2S$t,1], currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[Temp2S$t,x], cex = 3, col ="#A6760F")})
-                    
-                  })
-                  
-                  output$distPlot2Sample <- renderPlot({
-                    plot(dataPlot2Sample$datS[,1], dataPlot2Sample$datS[,grep(input$listeElemSample, colnames(dataPlot2Sample$datS))],  type ="b", ylab = "Nombre de coups", xlab = "Temps (s)")  
-                  })
-                  
-                }
-                if(currentProject()$flag_Sample[[grep(input$SampleIn,currentProject()$samplesFiles)]][grep(input$SampleIn2, currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)] == TRUE){
-                  
-                  output$Sample5 = renderUI({NULL})
-                  
-                }
-                
-              
-              }
-              
-              
-            })
-           
-          }
-        }) # observe        
         
         observe({
           input$ValiderSample
@@ -1093,12 +2466,11 @@ server <- function(input, output, session) {
           
           temoinSample$temp <- sapply(1:length(currentProject()$flag_Sample), function(x){if(length(which(currentProject()$flag_Sample[[x]] == F)) != 0){F}
                                                                                           else{T}
-          })      
-          
-        }) # observe
+          })
+        })
         
       }
-    }
+    
   })
   
   #######################
@@ -1129,6 +2501,7 @@ server <- function(input, output, session) {
         }
       })
       
+      ######## SPOT ##########
       observe({
         if(is.null(input$MoyenneSpot)){}
         else{
@@ -1185,6 +2558,7 @@ server <- function(input, output, session) {
         }
       }) # observe
       
+      ###### RASTER ##########
       observe({
         if(is.null(input$MoyenneRaster)){}
         else{
@@ -1203,81 +2577,10 @@ server <- function(input, output, session) {
         else{
           isolate({
             if(input$DemoyennerRaster > 0){
-              currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$setrep_flag(type = "raster", position = c(1,2,3,4,5), valeur = 0)
+              currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$setrep_flag(type = "raster", position = c(1,2), valeur = 0)
               currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$initial("rep_dataNonCorrel")
               updateSelectInput(session, "selectRealign", selected = input$selectRealign)
               updateSelectInput(session, "typeTraitement", selected = input$typeTraitement)
-            } 
-          })
-        }
-      }) # observe
-      
-      observe({
-        if(is.null(input$calcul)){}
-        else{
-          isolate({
-            input$calcul
-            if(input$calcul > 0){
-              currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$setrep_flag(type = "raster", position = 2, valeur = 1)
-              updateSelectInput(session, "selectRealign", selected = input$selectRealign)
-              updateSelectInput(session, "typeTraitement", selected = input$typeTraitement)
-            } 
-          })
-        }
-      }) # observe
-      
-      observe({
-        if(is.null(input$recalculer)){}
-        else{
-          isolate({
-            input$recalculer
-            if(input$recalculer > 0){
-              currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$setrep_flag(type = "raster", position = c(2,3,4,5), valeur = 0)
-              updateSelectInput(session, "selectRealign", selected = input$selectRealign)
-              updateSelectInput(session, "typeTraitement", selected = input$typeTraitement)
-            } 
-          })
-        }
-      }) # observe            
-      
-      observe({
-        if(is.null(input$choix)){}
-        else{
-          isolate({
-            if(input$choix > 0){
-              currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$setrep_flag(type = "raster", position = 3, valeur = 1)
-              updateSelectInput(session, "selectRealign", selected = input$selectRealign)
-              updateSelectInput(session, "typeTraitement", selected = input$typeTraitement)
-            } 
-          })               
-        }
-      }) # observe
-      
-      observe({
-        if(is.null(input$myplot_click)){}
-        else{
-          isolate({
-            input$myplot_click
-            if(input$myplot_click > 0){                  
-              currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$setrep_flag(type = "raster", position = 4, valeur = 1)
-              updateSelectInput(session, "selectRealign", selected = input$selectRealign)
-              updateSelectInput(session, "typeTraitement", selected = input$typeTraitement)
-              
-            } 
-          })
-        }
-      }) # observe
-      
-      observe({
-        if(is.null(input$deletePoint)){}
-        else{
-          isolate({
-            input$deletePoint
-            if(input$deletePoint > 0){                  
-              currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$setrep_flag(type = "raster", position = c(4,5), valeur = 0)
-              updateSelectInput(session, "selectRealign", selected = input$selectRealign)
-              updateSelectInput(session, "typeTraitement", selected = input$typeTraitement)
-              
             } 
           })
         }
@@ -1288,7 +2591,7 @@ server <- function(input, output, session) {
         else{
           isolate({
             if(input$SauvegarderReal > 0){
-              currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$setrep_flag(type = "raster", position = 5, valeur = 1)
+              currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$setrep_flag(type = "raster", position = 2, valeur = 1)
               currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$setrep_type2("raster")
               updateSelectInput(session, "selectRealign", selected = input$selectRealign)
               updateSelectInput(session, "typeTraitement", selected = input$typeTraitement)
@@ -1303,7 +2606,7 @@ server <- function(input, output, session) {
           isolate({
             input$Suppr
             if(input$Suppr > 0){                    
-              currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$setrep_flag(type = "raster", position = c(1,2,3,4,5), valeur = 0)
+              currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$setrep_flag(type = "raster", position = c(1,2), valeur = 0)
               updateSelectInput(session, "selectRealign", selected = input$selectRealign)
               updateSelectInput(session, "typeTraitement", selected = input$typeTraitement)
             } 
@@ -1324,16 +2627,11 @@ server <- function(input, output, session) {
           input$SupprSpot
           input$MoyenneRaster
           input$DemoyennerRaster
-          input$recalculer
-          input$choix
-          input$deletePoint
           input$SauvegarderReal
           input$Suppr
-          input$calcul
-          input$myplot_click
           input$SauvegarderSpot
-                    
-          if(input$typeTraitement == "spot" & currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_flagSpot[1] == 0 & currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_flagSpot[1] != 1){   
+          
+          if(input$typeTraitement == "spot" & currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_flagSpot[1] == 0 & currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_flagSpot[1] != 1 & currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_flagRaster[2] != 1){   
             
             currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$setRep_dataInterm(type = "spot")
             
@@ -1341,8 +2639,8 @@ server <- function(input, output, session) {
               box(background = "black", width = 3, height = 200,
                   column(12,
                          fluidRow(
-                           h3("Moyenne des spots :"),
-                           p(actionButton("MoyenneSpot", "Moyenner"),actionButton("DemoyennerSpot","Demoyenner"))
+                           h3("Spot averaging :"),
+                           p(actionButton("MoyenneSpot", "Mean"),actionButton("DemoyennerSpot","Undo"))
                          )                               
                   )                   
               ) # box                                                                             
@@ -1361,16 +2659,16 @@ server <- function(input, output, session) {
           } # if
           
           if(input$typeTraitement == "spot" & currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_flagSpot[1] == 1 & currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_flagSpot[2] != 1){  
-                        
+            
             currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$setrep_dataFinale(type = "spot") 
             
             output$textRealign2 <- renderUI({
               box(background = "black", width = 3, height = 200,
                   column(12,
                          fluidRow(
-                           h3("Moyenne des spots :"),
-                           p(actionButton("MoyenneSpot", "Moyenner"),actionButton("DemoyennerSpot","Demoyenner")),
-                           actionButton("SauvegarderSpot", "Sauvegarder Moyenne")
+                           h3("Spot averaging :"),
+                           p(actionButton("MoyenneSpot", "Mean"),actionButton("DemoyennerSpot","Undo")),
+                           actionButton("SauvegarderSpot", "Save averaging")
                          )                               
                   )                   
               ) # box                                                                             
@@ -1388,41 +2686,35 @@ server <- function(input, output, session) {
           } # if
           
           if(input$typeTraitement == "spot" & currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_flagSpot[2] == 1){
-                        
+            
             output$textRealign2 <- renderUI({
-              box(background = "black", width = 3, height = 200,
+              box(background = "black", width = 3, height = 100,
                   column(12,
-                         actionButton("SupprSpot", "Supprimer Moyenne")
+                         actionButton("SupprSpot", "Delete mean")
                   )                               
                   
               ) # box                                                                             
             })
+            
+            output$textRealign5 <- renderPlot({NULL}, bg = "transparent")
+            
           } # if
           
-          if(input$typeTraitement == "spot" & currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_flagRaster[5] == 1){
-                        
+          if(input$typeTraitement == "spot" & currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_flagRaster[2] == 1){
+            
             output$textRealign2 <- renderUI({
               box(background = "black", width = 3, height = 100,
                   column(12,
-                         h3("validé en raster")
+                         h3("Already validated with the raster protocole")
                   )                               
                   
               ) # box                                                                             
             })            
-            
-            output$textRealign5 <- renderPlot({NULL
-            })
-            
-            output$textRealign5_ui = renderUI({
-              
-              plotOutput("textRealign5")
-              
-            })
-            
-            output$textRealign3 <- renderTable({ NULL }, digits = 5)
           } # if
           
-          if(input$typeTraitement == "raster" & currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_flagRaster[1] == 0 & currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_flagRaster[1] != 1){
+          if(input$typeTraitement == "raster" & currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_flagRaster[1] == 0 & currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_flagRaster[1] != 1 & currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_flagSpot[2] != 1){
+            
+            
             
             output$textRealign3 <- renderTable({NULL})  
             
@@ -1478,10 +2770,11 @@ server <- function(input, output, session) {
                 
                 output$textRealign5 <- renderPlot({
                   
+                  
                   deplace$val
                   
                   ylim <- c(min(unlist(lapply(1:length(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_Files), function(i){currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataIntermRaster[[i]][,input$elemRaster]})), na.rm = T),max(unlist(lapply(1:length(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_Files), function(i){currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataIntermRaster[[i]][,input$elemRaster]})), na.rm = T))
-                                    
+                  
                   xlim <- c(min(unlist(lapply(1:length(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_Files), function(i){currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataIntermRaster[[i]][,1]}))),max(unlist(lapply(1:length(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_Files), function(i){currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataIntermRaster[[i]][,1]}))))
                   
                   lapply(1:length(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_Files), function(x){
@@ -1495,11 +2788,6 @@ server <- function(input, output, session) {
                   
                 })
                 
-                output$textRealign5_ui = renderUI({
-                  
-                  plotOutput("textRealign5")
-                  
-                }) 
                 
               }
             }) 
@@ -1519,23 +2807,17 @@ server <- function(input, output, session) {
             
             output$textRealign2 <- renderUI({
               
-              box(background = "black", width = 3, height = 400,
+              box(background = "black", width = 3, height = 175,
                   column(12,  
                          fluidRow(
                            column(6, h3("Rasters realignment :")), 
                            column(6, h3(icon("check"), ""))
                          ),
                          br(),
-                         actionButton("DemoyennerRaster","Delete averaging"), 
-                         br(),br(),
-                         h3("Elimination points correles"),
-                         br(),
                          fluidRow(
-                           column(6,numericInput("vitesse", "vitesse du raster", value = value3,step = 1)), 
-                           column(6,numericInput("Dimraster", "Taille du laser", value = value4,step = 1)))
-                         ,
-                         br(),
-                         actionButton("calcul", "calculer")
+                           column(3, actionButton("DemoyennerRaster","Delete averaging")), 
+                           column(6, actionButton("SauvegarderReal","Save averaging"))
+                         )
                          
                   ) # column                   
               ) # box
@@ -1557,204 +2839,19 @@ server <- function(input, output, session) {
               
               plot(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataFinaleCorrel[,1],currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataFinaleCorrel[,input$elemRaster], xlim = xlim, ylim = ylim, xlab = "", ylab = "", type = "b")
               
-            })
-            
-            output$textRealign5_ui = renderUI({
-              
-              plotOutput("textRealign5")
-              
-            }) 
-            
+            })  
             
             
             
           } # if
           
-          if(input$typeTraitement == "raster" & currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_flagRaster[2] == 1 & currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_flagRaster[3] != 1){
-                        
-            currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$set_repParam(input$vitesse,input$Dimraster)
-                        
-            correl$temp <- round(input$Dimraster/input$vitesse, digits = 0)
+          if(input$typeTraitement == "raster" & currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_flagRaster[2] == 1){
             
-            output$textRealign2 <- renderUI({
-              
-              box(background = "black", width = 3, height = 450,
-                  column(12,  
-                         fluidRow(
-                           column(6, h3("Rasters realignment :")), 
-                           column(6, h3(icon("check"), ""))
-                         ),
-                         br(),
-                         actionButton("DemoyennerRaster","Delete averaging"), 
-                         br(),br(),
-                         fluidRow(
-                           column(8, h3("Elimination points correles")), 
-                           column(4, h3(icon("check"), ""))
-                         ), 
-                         br(),
-                         actionButton("recalculer", "recalculer"),
-                         br(),
-                         br(),
-                         h3("choix du premier point"),
-                         br(),
-                         actionButton("choix","selection premier point analyse")
-                         
-                  ) # column                   
-              ) # box
-              
-              
-            }) # textRealign2
-          } # if
-          
-          if(input$typeTraitement == "raster" & currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_flagRaster[3] == 1 & currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_flagRaster[4] != 1){
-            
-            correl$temp <- round(input$Dimraster/input$vitesse, digits = 0)
-            
-            if(temoin$temp[[1]] == 1){       
-                            
-              output$textRealign2 <- renderUI({
-                
-                box(background = "black", width = 3, height = 450,
-                    column(12,  
-                           fluidRow(
-                             column(6, h3("Rasters realignment :")), 
-                             column(6, h3(icon("check"), ""))
-                           ),
-                           br(),
-                           actionButton("DemoyennerRaster","Delete averaging"), 
-                           br(),br(),
-                           fluidRow(
-                             column(8, h3("Elimination points correles")), 
-                             column(4, h3(icon("check"), ""))
-                           ), 
-                           br(),
-                           actionButton("recalculer", "recalculer"),
-                           br(),
-                           br(),
-                           h3("choix du premier point"),
-                           br(),
-                           actionButton("choix","selection premier point analyse")
-                           
-                    ) # column                   
-                ) # box
-                
-                
-              }) # textRealign2
-              
-              output$textRealign5 <- renderPlot({
-                
-                ylim <- c(min(unlist(lapply(1:length(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_Files), function(i){currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataIntermRaster[[i]][,input$elemRaster]})), na.rm = T),max(unlist(lapply(1:length(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_Files), function(i){currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataIntermRaster[[i]][,input$elemRaster]})), na.rm = T))
-                
-                xlim <- c(min(unlist(lapply(1:length(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_Files), function(i){currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataIntermRaster[[i]][,1]}))),max(unlist(lapply(1:length(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_Files), function(i){currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataIntermRaster[[i]][,1]}))))
-                
-                plot(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataFinaleCorrel[,1],currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataFinaleCorrel[,input$elemRaster], xlim = xlim, ylim = ylim, xlab = "", ylab = "", type = "b")
-                
-              })
-              
-              output$textRealign5_ui = renderUI({
-                
-                plotOutput("textRealign5", clickId = "myplot_click")
-                
-              })
-              
-            }
-                        
-            if(temoin$temp[[1]] == 2){
-                            
-              output$textRealign5 <- renderPlot({
-                                
-                ylim <- c(min(unlist(lapply(1:length(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_Files), function(i){currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataIntermRaster[[i]][,input$elemRaster]})), na.rm = T),max(unlist(lapply(1:length(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_Files), function(i){currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataIntermRaster[[i]][,input$elemRaster]})), na.rm = T))
-                
-                xlim <- c(min(unlist(lapply(1:length(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_Files), function(i){currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataIntermRaster[[i]][,1]}))),max(unlist(lapply(1:length(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_Files), function(i){currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataIntermRaster[[i]][,1]}))))
-                
-                plot(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataFinaleCorrel[,1],currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataFinaleCorrel[,input$elemRaster], xlim = xlim, ylim = ylim, xlab = "", ylab = "", type = "b")
-                
-                points(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_coord[1],currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_coord[input$elemRaster] ,pch = 16, cex = 2.5, col = "violet")
-                                
-              })
-              
-              output$textRealign5_ui = renderUI({
-                
-                plotOutput("textRealign5", clickId = "myplot_click")
-                
-              })
-              
-            }
-            
-          } # if
-          
-          if(input$typeTraitement == "raster" & currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_flagRaster[4] == 1 & currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_flagRaster[5] != 1 & !is.null(input$myplot_click)){        
-                         
-            currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$setrep_dataNonCorrel(correl$temp, input$myplot_click)
-            
-            currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$setRep_coord(input$myplot_click)
-            
-            output$textRealign2 <- renderUI({
-              
-              box(background = "black", width = 3, height = 550,
-                  column(12,  
-                         fluidRow(
-                           column(6, h3("Rasters realignment :")), 
-                           column(6, h3(icon("check"), ""))
-                         ),
-                         br(),
-                         actionButton("DemoyennerRaster","Delete averaging"), 
-                         br(),br(),
-                         fluidRow(
-                           column(8, h3("Elimination points correles")), 
-                           column(4, h3(icon("check"), ""))
-                         ), 
-                         br(),
-                         actionButton("recalculer", "recalculer"),
-                         br(),
-                         br(),
-                         fluidRow(
-                           column(8, h3("choix du premier point")), 
-                           column(4, h3(icon("check"), ""))
-                         ),
-                         br(),
-                         actionButton("deletePoint","delete"),
-                         br(),
-                         br(),
-                         br(),
-                         fluidRow(
-                           column(8, h3("Sauvegarde Realignment")), 
-                           column(4, actionButton("SauvegarderReal","Save"))
-                         )
-                         
-                  ) # column                   
-              ) # box
-              
-              
-            }) # textRealign
-            
-            output$textRealign5 <- renderPlot({
-              
-              ylim <- c(min(unlist(lapply(1:length(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_Files), function(i){currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataIntermRaster[[i]][,input$elemRaster]})), na.rm = T),max(unlist(lapply(1:length(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_Files), function(i){currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataIntermRaster[[i]][,input$elemRaster]})), na.rm = T))
-              
-              xlim <- c(min(unlist(lapply(1:length(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_Files), function(i){currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataIntermRaster[[i]][,1]}))),max(unlist(lapply(1:length(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_Files), function(i){currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataIntermRaster[[i]][,1]}))))
-              
-              plot(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataFinaleCorrel[,1],currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataFinaleCorrel[,input$elemRaster], xlim = xlim, ylim = ylim, xlab = "", ylab = "", type = "b")
-              
-              points(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataNonCorrel[,1], currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataNonCorrel[,input$elemRaster], xlim = xlim, ylim = ylim, xlab = "", ylab = "", pch = 16, cex = 2.5, col = "red")
-              
-            })
-            
-            output$textRealign5_ui = renderUI({
-              
-              plotOutput("textRealign5")
-              
-            })
-            
-          } # if
-          
-          if(input$typeTraitement == "raster" & currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_flagRaster[5] == 1){
-                        
             output$textRealign2 <- renderUI({
               
               box(background = "black", width = 3, height = 100,
                   column(12,
-                         actionButton("Suppr","Supprimer Realignement")
+                         actionButton("Suppr","Delete Realignment")
                   )
               )
               
@@ -1766,7 +2863,7 @@ server <- function(input, output, session) {
             output$textRealign2 <- renderUI({
               box(background = "black", width = 3, height = 100,
                   column(12,
-                         h3("validé en spot")
+                         h3("Already validated with the spot protocole")
                   )                               
                   
               ) # box                                                                             
@@ -1781,43 +2878,27 @@ server <- function(input, output, session) {
             }, digits = 5)
             
             output$textRealign5 <- renderPlot({NULL}, bg = "transparent")
-            output$textRealign5_ui = renderUI({
-              
-              plotOutput("textRealign5")
-              
-            })
           } # if
           
           
-          
-          
-        } # else
+        }
         
-      }) # observe               
-      
-    } # if
-    
+      })
+    }
     if(length(which(temoinSample$temp == T)) == 0){
       output$textRealign <- renderUI({NULL})
       output$textRealignBis <- renderUI({NULL})
       output$textRealignBis2 <- renderUI({NULL})
-      output$textRealign5_ui <- renderUI({NULL})
       output$textRealign2 <- renderUI({NULL})
       output$textRealign7 <- renderUI({NULL})
       output$textRealign3 <- renderUI({NULL})
       
     }
-  }) 
+    
+  })
   
 }#eo server
 
-PlotIC <- function(nom, Mean,SD, lengthSeg, xlim, ylim, type = "p"){
-  plot(as.factor(nom), rep(-1,length(nom)), ylim = ylim, xlim = xlim, type = type)
-  points(1:length(Mean),Mean)
-  segments(1:length(Mean), Mean-SD, 1:length(Mean), Mean+SD)
-  segments((1:length(Mean))-lengthSeg,Mean+SD,(1:length(Mean))+lengthSeg,Mean+SD)
-  segments((1:length(Mean))-lengthSeg,Mean-SD,(1:length(Mean))+lengthSeg,Mean-SD)
-}
 
 ######################
 ######## CALL shinyApp

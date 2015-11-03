@@ -9,19 +9,12 @@
 #install.packages("abind", dependencies = T)
 #install.packages("gplots", dependencies = T)
 #install.packages("graphics", dependences =T)
+# install.packages("stringr", dependencies=TRUE)
+# install.packages("lmtest", dependencies=TRUE)
 
 library(shiny)
-library(devtools)
-library(R6)
-library(shinydashboard)
-library(tseries)
-library(xts)
-library("graphics")
-library("gplots")
-library("stringr")
-library("abind")
-
 setwd("/home/cha/Documents") # A changer ici
 runApp("elementR", launch.browser = T)
 
 runGitHub( "ElementR", "charlottesirot", ref = "dashDy-Cha", launch.browser = T) 
+
