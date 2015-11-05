@@ -582,8 +582,8 @@ server <- function(input, output, session) {
                                             br(),
                                             h4("4. Choose elements to consider"),
                                             checkboxGroupInput("ElementGroup", label = "", 
-                                                               choices = colnames(read.csv(paste(getwd(),"Data/",input$folderProjectIn, "/calibrations",dir(paste0("Data/",input$folderProjectIn, "/calibrations"))[1],sep="/"), sep = ";", h = T, dec =","))[-1],
-                                                               selected = colnames(read.csv(paste(getwd(),"Data/",input$folderProjectIn, "/calibrations",dir(paste0("Data/",input$folderProjectIn, "/calibrations"))[1],sep="/"), sep = ";", h = T, dec =","))[-1], inline = T)                                            
+                                                               choices = colnames(read.csv(paste(getwd(),"Data/",input$folderProjectIn, "/calibrations",dir(paste0("Data/",input$folderProjectIn, "/calibrations"))[1],sep="/"), sep = ";", h = T, dec ="."))[-1],
+                                                               selected = colnames(read.csv(paste(getwd(),"Data/",input$folderProjectIn, "/calibrations",dir(paste0("Data/",input$folderProjectIn, "/calibrations"))[1],sep="/"), sep = ";", h = T, dec ="."))[-1], inline = T)                                            
                                           )
                                           
                                         })

@@ -51,7 +51,7 @@ elementR_data <- R6Class("elementR_data",
                              self$fPath <- fPath
                              self$gg <- aaa(1)
                              #####dealing with data
-                             d <- read.csv(fPath,sep=";",dec=",",header=TRUE)
+                             d <- read.csv(fPath,sep=";",dec=".",header=TRUE)
                              self$data <- d
 #                              self$greet()
                            },#initialize
@@ -164,19 +164,19 @@ elementR_data <- R6Class("elementR_data",
                            
                            setDataDesanomalise = function(bins, plat){
                              
-                             print("step4")
+#                              print("step4")
                              
                              self$setDataNorm(bins, plat)
                              
-                             print("step5")
+#                              print("step5")
                              
                              ValMax <- apply(self$dataPlateauMoinsBlancSupLODNorm[,-1], 2, function(k){mean(k, na.rm = T) + 2*sd(k,na.rm = T)})
                              
-                             print("step6")
+#                              print("step6")
                              
                              ValMin <- apply(self$dataPlateauMoinsBlancSupLODNorm[,-1], 2, function(k){mean(k, na.rm = T) - 2*sd(k,na.rm = T)})
                              
-                             print("step7")
+#                              print("step7")
                              
                              subDat <- do.call(rbind,lapply(1:dim(self$dataPlateauMoinsBlancSupLODNorm[,-1])[1], function(z){
                                
@@ -186,7 +186,7 @@ elementR_data <- R6Class("elementR_data",
                                
                              }))
                              
-                             print("step8")
+#                              print("step8")
                              
                              self$dataPlateauMoinsBlancSupLODNormSansAnom <- cbind(as.matrix(self$dataPlateauMoinsBlancSupLODNorm[,1]),subDat)
                              
@@ -333,11 +333,11 @@ elementR_sample <- R6Class("elementR_sample",
                              
                              setDataDesanomaliseConc = function(bins, plat, SimNist){
                                
-                               print("step1")
+#                                print("step1")
                                
                                self$setDataDesanomalise(bins, plat)    
                                
-                               print("step2")
+#                                print("step2")
                                                            
                                temp <- sapply(2:ncol(self$dataPlateauMoinsBlancSupLODNormSansAnom), function(x){
                                  
@@ -347,7 +347,7 @@ elementR_sample <- R6Class("elementR_sample",
                                
                                self$dataPlateauMoinsBlancSupLODNormSansAnomConc <- cbind(as.matrix(self$dataPlateauMoinsBlancSupLODNormSansAnom[,1]),temp)
                                
-                               print("step3")
+#                                print("step3")
                                
                                colnames(self$dataPlateauMoinsBlancSupLODNormSansAnomConc) <- colnames(self$dataPlateauMoinsBlancSupLODNormSansAnom)
                                
@@ -591,10 +591,10 @@ elementR_project <- R6Class("elementR_project",
                                 
                                 # Etalon
                                 self$EtalonPath <- paste0(folderPath,"/settings")
-                                temp <- read.csv(paste0(folderPath,"/settings/Standard.csv"), sep = ";", dec = ",", h = T)
+                                temp <- read.csv(paste0(folderPath,"/settings/Standard.csv"), sep = ";", dec = ".", h = T)
                                 self$EtalonData <- t(as.matrix(sapply(2: ncol(temp), function(x){as.numeric(as.character(temp[1,x]))})))
                                 colnames(self$EtalonData) <- colnames(temp)[2:length(colnames(temp))]     
-                                self$sessionSummary <- read.csv(paste0(folderPath,"/settings/Session summary.csv"), sep = ";", dec = ",", h = T)                      
+                                self$sessionSummary <- read.csv(paste0(folderPath,"/settings/Session summary.csv"), sep = ";", dec = ".", h = T)                      
                                                                 
                                 #calibrations
                                 self$calibrationsPath <- paste0(folderPath,"/calibrations")
