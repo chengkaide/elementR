@@ -310,7 +310,7 @@ server <- function(input, output, session) {
             }
             if(currentProject()$samples[[x]]$rep_type2 == "raster"){
               write.csv(currentProject()$samples[[x]]$rep_dataFinaleCorrel, file = paste0("finalCorrel_",currentProject()$samplesFiles[x],".csv"))
-              write.csv(currentProject()$samples[[x]]$rep_dataNonCorrel, file = paste0("finalNonCorrel_",currentProject()$samplesFiles[x],".csv"))
+#               write.csv(currentProject()$samples[[x]]$rep_dataNonCorrel, file = paste0("finalNonCorrel_",currentProject()$samplesFiles[x],".csv"))
             } 
           }
           
@@ -582,8 +582,8 @@ server <- function(input, output, session) {
                                             br(),
                                             h4("4. Choose elements to consider"),
                                             checkboxGroupInput("ElementGroup", label = "", 
-                                                               choices = colnames(read.csv(paste(getwd(),"Data/example_1/calibrations",dir("Data/example_1/calibrations")[1],sep="/"), sep = ";", h = T, dec =","))[-1],
-                                                               selected = colnames(read.csv(paste(getwd(),"Data/example_1/calibrations",dir("Data/example_1/calibrations")[1],sep="/"), sep = ";", h = T, dec =","))[-1], inline = T)                                            
+                                                               choices = colnames(read.csv(paste(getwd(),"Data/",input$folderProjectIn, "/calibrations",dir(paste0("Data/",input$folderProjectIn, "/calibrations"))[1],sep="/"), sep = ";", h = T, dec =","))[-1],
+                                                               selected = colnames(read.csv(paste(getwd(),"Data/",input$folderProjectIn, "/calibrations",dir(paste0("Data/",input$folderProjectIn, "/calibrations"))[1],sep="/"), sep = ";", h = T, dec =","))[-1], inline = T)                                            
                                           )
                                           
                                         })
@@ -2256,8 +2256,7 @@ server <- function(input, output, session) {
   
   machineCorrection <- reactiveValues(temp = list())
   observe({
-      if((validCorrection$temp%%2) == 1){    
-        print("save")
+      if((validCorrection$temp%%2) == 1){
         lapply(1:length(currentProject()$samplesFiles), function(x){lapply(1:length(currentProject()$samples[[x]]$rep_data), function(t){currentProject()$samples[[x]]$rep_data[[t]]$setstandard(currentProject()$EtalonData)})})
         
         lapply(1:length(currentProject()$listeElem), function(x){
@@ -2478,6 +2477,7 @@ server <- function(input, output, session) {
   #######################
   
   observe({
+    input$ValiderSample
     if(length(which(temoinSample$temp == T)) != 0){
       
       output$textRealign <- renderUI({
