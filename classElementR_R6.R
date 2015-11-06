@@ -356,19 +356,18 @@ elementR_sample <- R6Class("elementR_sample",
                              ##########################################################
 
                             setDataDesanomaliseConcCorr = function(bins, plat, nom, summarySession, model){
-                                
+                                                                                          
                                 self$setDataDesanomalise(bins, plat) 
                                 
                                 rank <- summarySession[which(summarySession[,1] == nom),2]
                                                                 
                                 temp <- sapply(2:ncol(self$dataPlateauMoinsBlancSupLODNormSansAnom), function(x){
-                                  
+
                                   StandTheoric <- model[[x-1]][1] + rank * model[[x-1]][2]
                                   
                                   return(self$dataPlateauMoinsBlancSupLODNormSansAnom[,x] * self$standard[1,x-1] / StandTheoric)
                                   
                                 })
-
                                 
                                 self$dataPlateauMoinsBlancSupLODNormSansAnomConcCorr <- cbind(as.matrix(self$dataPlateauMoinsBlancSupLODNormSansAnom[,1]),temp)
                                 
@@ -492,8 +491,7 @@ elementR_project <- R6Class("elementR_project",
                               
                               setelem = function(x){
                                 self$listeElem <- x
-                              },
-                              
+                              },                              
                               
                               setCorrection = function(x){
                                 
@@ -518,30 +516,64 @@ elementR_project <- R6Class("elementR_project",
                                   
                                 }
                                 
-                                for(j in 1:(Nbelem)){
-                                  Y <- self$SummaryNist[1:length(self$calibrationsFiles),j]               
+                                if(length(self$calibrationsFiles) == 1){
                                   
-                                  model <- lm(Y~X)
-                                  
-                                  self$regressionModel[[j]] <- model
-                                  
-                                  # tests 
-                                  model.res <- model$res
-                                  
-                                  res_test <- vector()
-                                  
-                                  if(length(which(Y != 1)) == 0){res_test <- NA}
-                                  else{
+                                  for(j in 1:(Nbelem)){
                                     
-                                    res_test[1] <- shapiro.test(model.res)$p.value
-                                    res_test[2] <- hmctest(model)$p.value
-                                    res_test[3] <- dwtest(model)$p.value
-                                    res_test[4] <- summary(model)$coefficients[2,4]
-                                    res_test[5:6] <- summary(model)$coefficients[,1]
+                                    slope <- 0
+                                    
+                                    intercept <- Y <- self$SummaryNist[1,j]
+                                    
+                                    tableau[j,5:6] <- c(intercept , slope)
+                                    
+                                    self$regressionModel[[j]] <- c(intercept , slope)
+                                    
                                   }
                                   
-                                  tableau[j,] <- res_test
-                                }                                 
+                                }
+                                if(length(self$calibrationsFiles) == 2){
+                                  
+                                  for(j in 1:(Nbelem)){
+                                    Y <- self$SummaryNist[1:length(self$calibrationsFiles),j]               
+                                    
+                                    slope <- (Y[2] - Y[1])/(X[1] - X[2])
+                                    
+                                    intercept <- Y[1] - slope*X[1]
+                                    
+                                    tableau[j,5:6] <- c(intercept , slope)
+                                    
+                                    self$regressionModel[[j]] <- c(intercept , slope)
+                                  }  
+                                  
+                                }
+                                if(length(self$calibrationsFiles) > 2){
+                                  
+                                  for(j in 1:(Nbelem)){
+                                    Y <- self$SummaryNist[1:length(self$calibrationsFiles),j]               
+                                    
+                                    model <- lm(Y~X)
+                                    
+                                    self$regressionModel[[j]] <- model
+                                    
+                                    # tests 
+                                    model.res <- model$res
+                                    
+                                    res_test <- vector()
+                                    
+                                    if(length(which(Y != 1)) == 0){res_test <- NA}
+                                    else{
+                                      
+                                      res_test[1] <- shapiro.test(model.res)$p.value
+                                      res_test[2] <- hmctest(model)$p.value
+                                      res_test[3] <- dwtest(model)$p.value
+                                      res_test[4] <- summary(model)$coefficients[2,4]
+                                      res_test[5:6] <- summary(model)$coefficients[,1]
+                                    }
+                                    
+                                    tableau[j,] <- res_test
+                                  }  
+                                  
+                                }
                                 return(tableau)
                                 
                               },
@@ -566,7 +598,7 @@ elementR_project <- R6Class("elementR_project",
                                 temp <- read.csv(files[1], sep = ";")
                                 toCheck <- colnames(temp)[-1]
                                 
-                                for (i in 2: length(files)){
+                                for (i in 1: length(files)){
                                   temp <- colnames(read.csv(files[i], sep = ";"))[-1]
                                   if(self$vectorCheck(toCheck, temp) == 0){}
                                   if(self$vectorCheck(toCheck, temp) == 1){error <- 1; location[k] <- files[i]; k <- k+1;}   
@@ -622,7 +654,7 @@ elementR_project <- R6Class("elementR_project",
                                 flagTemp <- lapply(1:length(self$samplesFiles), function(x){dir(paste0(folderPath,"/samples/",self$samplesFiles[x]))})
                                 self$flag_Sample <- lapply(1: length(flagTemp), function(x){ r <- rep(0, length(flagTemp[[x]])) ; names(r) <- flagTemp[[x]] ; r})                                
                                 
-#                                 self$greet()
+                                self$greet()
                               },#initialize
                               
                               greet = function() {
@@ -801,34 +833,49 @@ elementR_repSample <- R6Class("elementR_repSample",
                                
                                Realign2 = function(liste, pas){
                                  
-                                 min = min(do.call(rbind,liste)[,1]) ; minPlace = NA; minPlace = which(sapply(1:length(liste), function(x){
+                                 min = min(do.call(rbind,liste)[,1])
+                                 
+                                 minPlace = which(sapply(1:length(liste), function(x){
                                    if(length(which(liste[[x]][,1] == min)) == 1) {T}
                                    else {F}
                                  }) == T)
                                  
                                  if(length(minPlace) != 1){minPlace = minPlace[1]}
                                  
-                                 max = max(do.call(rbind,liste)[,1]) ; maxPlace = NA; maxPlace = which(sapply(1:length(liste), function(x){
+                                 max = max(do.call(rbind,liste)[,1]) 
+                                 
+                                 maxPlace = which(sapply(1:length(liste), function(x){
                                    if(length(which(liste[[x]][,1] == max)) == 1) {T}
                                    else {F}
                                  }) == T)
                                  
                                  if(length(maxPlace) != 1){maxPlace = maxPlace[length(maxPlace)]}
+                                                                  
+                                 dataMin <- liste[[minPlace]]
                                  
-                                 A <- liste[[minPlace]]
+                                 dataMax <- liste[[maxPlace]]
                                  
-                                 B <- liste[[maxPlace]]
+                                 for(i in 1:length(liste)){
+                                   
+                                   temp <- liste[[i]]
+                                   
+                                   while(round(dataMin[1,1]) < round(temp[1,1])){temp = rbind(c(temp[1,1]-pas,rep(NA,dim(dataMin)[2]-1)),temp)}
+                                   
+                                   liste[[i]] <- temp
+                                   
+                                 }
                                  
-                                 if(round(A[1,1]) < round(B[1,1])){while(round(B[1,1]) > round(A[1,1])){B = rbind(c(B[1,1]-pas,rep(NA,dim(A)[2]-1)),B)}}#
-                                 if(round(A[1,1]) > round(B[1,1])){while(round(A[1,1]) > round(B[1,1])){A = rbind(c(A[1,1]-pas,rep(NA,dim(A)[2]-1)),A)}}
-                                 
-                                 if(round(A[dim(A)[1],1]) < round(B[dim(B)[1],1])){while(round(B[dim(B)[1],1]) > round(A[dim(A)[1],1])){A = rbind(A,c(A[dim(A)[1],1] + pas,rep(NA,dim(A)[2]-1)))}} 
-                                 if(round(A[dim(A)[1],1]) > round(B[dim(B)[1],1])){while(round(A[dim(A)[1],1]) > round(B[dim(B)[1],1])){B = rbind(B,c(B[dim(B)[1],1] + pas,rep(NA,dim(A)[2]-1)))}}#
-                                 
-                                 liste[[minPlace]] <- A
-                                 liste[[maxPlace]] <- B
+                                 for(i in 1:length(liste)){
+                                   
+                                   temp <- liste[[i]]
+                                   
+                                   while(round(dataMax[dim(dataMax)[1],1]) > round(temp[dim(temp)[1],1])){temp = rbind(temp,c(temp[dim(temp)[1],1]+pas,rep(NA,dim(dataMax)[2]-1)))}
+                                   
+                                   liste[[i]] <- temp
+                                   
+                                 }
                                                                                                
-                                 self$Realign1(liste, pas)                                 
+                                 return(liste)                              
                                },
                                
                                setRep_dataFiltre = function(){
@@ -847,8 +894,11 @@ elementR_repSample <- R6Class("elementR_repSample",
                                                                                                    
                                  if(!is.na(self$rep_dataFiltre) & type == "spot"){
                                    
-                                   self$rep_dataIntermSpot <- t(as.matrix(sapply(1:length(self$rep_Files), function(x){apply(self$rep_dataFiltre[[x]][,-1],2, mean,na.rm = T)})))
+                                   tabTemp <- rbind(t(as.matrix(sapply(1:length(self$rep_Files), function(x){apply(self$rep_dataFiltre[[x]][,-1],2, mean,na.rm = T)}))),t(as.matrix(sapply(1:length(self$rep_Files), function(x){apply(self$rep_dataFiltre[[x]][,-1],2, sd,na.rm = T)}))))
                                    
+                                   tabTemp <- cbind(c(rep("mean",length(self$rep_Files)), rep("sd",length(self$rep_Files)),"total mean","total sd"), c(self$rep_Files, self$rep_Files, "-","-"), tabTemp)
+                                   
+                                   self$rep_dataIntermSpot <- tabTemp
                                  }
                                  
                                  if(!is.na(self$rep_dataFiltre) & type == "raster"){
@@ -899,14 +949,14 @@ elementR_repSample <- R6Class("elementR_repSample",
                                  
                                  if(!is.na(self$rep_dataFiltre) & type == "spot"){
                                    
-                                   self$rep_dataIntermSpotBis <- rbind(apply(do.call(rbind,self$rep_dataFiltre)[,-1], 2, mean, na.rm = T), apply(do.call(rbind,self$rep_dataFiltre)[,-1], 2, sd, na.rm = T))
-                                   
+                                   self$rep_dataIntermSpotBis <- rbind(self$rep_dataIntermSpot, c("total mean", "-", apply(do.call(rbind,self$rep_dataFiltre)[,-1], 2, mean, na.rm = T)), c("mean sd","-",apply(do.call(rbind,self$rep_dataFiltre)[,-1], 2, sd, na.rm = T)))
+                                                                      
                                  }  
                                  
                                  if(type == "raster"){                          
                                    
                                    MatTemp <- self$Realign2(self$rep_dataIntermRaster, pas = self$rep_pas)
-                                                                                                        
+                                                                                                                                           
                                    MatTemp <- abind(MatTemp,along=3)                                   
                                                                  
                                    MatTemp <- apply(MatTemp,c(1,2),mean,na.rm=TRUE)
@@ -1003,7 +1053,7 @@ elementR_repSample <- R6Class("elementR_repSample",
                                initial = function(x){
                                  
                                  eval(parse(text = paste0("self$",x,"<- NA")))
-                                            
+                                 
                                }
                                
                              ) # list
