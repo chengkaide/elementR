@@ -299,6 +299,7 @@ server <- function(input, output, session) {
               write.csv(currentProject()$samples[[x]]$rep_data[[y]]$dataPlateauMoinsBlancSupLODNorm, file = paste0("dataPlateauMoinsBlancSupLODNorm__",temporaire,".csv"))
               write.csv(currentProject()$samples[[x]]$rep_data[[y]]$dataPlateauMoinsBlancSupLODNormSansAnom, file = paste0("dataPlateauMoinsBlancSupLODNormSansAnom_",temporaire,".csv"))
               write.csv(currentProject()$samples[[x]]$rep_data[[y]]$dataPlateauMoinsBlancSupLODNormSansAnomConc, file = paste0("dataPlateauMoinsBlancSupLODNormSansAnomConc_",temporaire,".csv"))
+              write.csv(currentProject()$samples[[x]]$rep_data[[y]]$dataPlateauMoinsBlancSupLODNormSansAnomConcCorr, file = paste0("dataPlateauMoinsBlancSupLODNormSansAnomConcCorr_",temporaire,".csv"))
             }
           }) #eo lapply
           
@@ -380,7 +381,7 @@ server <- function(input, output, session) {
           )#fluidRow
         })
       }
-      if(dataChoisies$temp == 0 & currentProject()$elementChecking[1] == 0){
+      if(dataChoisies$temp == 0 & currentProject()$elementChecking[1] == 0 & is.null(currentProject()$errorSession)){
         output$premier = renderUI({
           fluidRow(
             box(
@@ -568,7 +569,9 @@ server <- function(input, output, session) {
                                       
                                       temoin$temp = list(1, "Création projet", input$folderProjectIn, paste("Data/",input$folderProjectIn,sep=""), dir(paste("Data/",input$folderProjectIn,"/calibrations",sep="")), dir(paste("Data/",input$folderProjectIn,"/samples",sep="")), data$temp$listeElem)
                                       
-                                      if(currentProject()$elementChecking[1] == 0){ 
+                                      if(currentProject()$elementChecking[1] == 0 & is.null(currentProject()$errorSession)){ 
+                                        
+                                        
                                         
                                         output$ChoixDonne1 <- renderUI({
                                           
@@ -578,7 +581,7 @@ server <- function(input, output, session) {
                                             #background = "aqua",
                                             status="primary",
                                             solidHeader = TRUE,
-                                            height=450,
+                                            height=520,
                                             h4("1. Choose the project folder"),
                                             selectInput("folderProjectIn", NULL ,  as.matrix(dir(paste0(sauvegarde,"/Data/"))),multiple = FALSE),
                                             h4("2. Create the project"),
@@ -591,14 +594,61 @@ server <- function(input, output, session) {
                                             h4("4. Choose elements to consider"),
                                             checkboxGroupInput("ElementGroup", label = "", 
                                                                choices = colnames(read.csv(paste(getwd(),"Data/",input$folderProjectIn, "/calibrations",dir(paste0("Data/",input$folderProjectIn, "/calibrations"))[1],sep="/"), sep = ";", h = T, dec ="."))[-1],
-                                                               selected = colnames(read.csv(paste(getwd(),"Data/",input$folderProjectIn, "/calibrations",dir(paste0("Data/",input$folderProjectIn, "/calibrations"))[1],sep="/"), sep = ";", h = T, dec ="."))[-1], inline = T)                                            
+                                                               selected = colnames(read.csv(paste(getwd(),"Data/",input$folderProjectIn, "/calibrations",dir(paste0("Data/",input$folderProjectIn, "/calibrations"))[1],sep="/"), sep = ";", h = T, dec ="."))[-1], inline = T),                                            
+                                            br(),
+                                            h4("5. Verification of the non-numeric character of the data"),
+                                            h4(icon("check"), "Data checked")
                                           )
                                           
                                         })
                                       }
-                                      
-                                      else{
+                                      if(currentProject()$elementChecking[1] == 1 & is.null(currentProject()$errorSession)){
                                         
+                                        output$ChoixDonne1 <- renderUI({
+                                          box(
+                                          title = list(icon("folder-o"),"New Project"),
+                                          width = 6,
+                                          #background = "aqua",
+                                          status="primary",
+                                          solidHeader = TRUE,
+                                          height=380,
+                                          h4("1. Choose the project folder"),
+                                          selectInput("folderProjectIn", NULL ,  as.matrix(dir(paste0(sauvegarde,"/Data/"))),multiple = FALSE),
+                                          h4("2. Create the project"),
+                                          actionButton("createProjButton", "Create project !"),
+                                          h4("3. Checking elements"),
+                                          h4(icon("times"), paste0("Problem in ", paste(currentProject()$elementChecking[2]))),
+                                          br(),
+                                          h4("5. Verification of the non-numeric character of the data"),
+                                          h4(icon("check"), "Data checked")
+                                          )
+                                        })
+                                        
+                                      }
+                                      if(currentProject()$elementChecking[1] == 1 & !is.null(currentProject()$errorSession)){
+                                        
+                                        output$ChoixDonne1 <- renderUI({
+                                          box(
+                                          title = list(icon("folder-o"),"New Project"),
+                                          width = 6,
+                                          #background = "aqua",
+                                          status="primary",
+                                          solidHeader = TRUE,
+                                          height=380,
+                                          h4("1. Choose the project folder"),
+                                          selectInput("folderProjectIn", NULL ,  as.matrix(dir(paste0(sauvegarde,"/Data/"))),multiple = FALSE),
+                                          h4("2. Create the project"),
+                                          actionButton("createProjButton", "Create project !"),
+                                          h4("3. Checking elements"),
+                                          h4(icon("times"), paste0("Problem in ", paste(currentProject()$elementChecking[2]))),
+                                          br(),
+                                          h4("5. Verification of the non-numeric character of the data"),
+                                          h4(icon("times"), paste0("Problem in ", paste0(currentProject()$errorSession, collapse = " ")))
+                                          )
+                                        })
+                                        
+                                      }
+                                      if(currentProject()$elementChecking[1] == 0 & !is.null(currentProject()$errorSession)){
                                         output$ChoixDonne1 <- renderUI({
                                           
                                           box(
@@ -607,20 +657,28 @@ server <- function(input, output, session) {
                                             #background = "aqua",
                                             status="primary",
                                             solidHeader = TRUE,
-                                            height=300,
+                                            height=520,
                                             h4("1. Choose the project folder"),
                                             selectInput("folderProjectIn", NULL ,  as.matrix(dir(paste0(sauvegarde,"/Data/"))),multiple = FALSE),
                                             h4("2. Create the project"),
                                             actionButton("createProjButton", "Create project !"),
+                                            br(),
+                                            br(),
                                             h4("3. Checking elements"),
-                                            h4(icon("times"), paste0("Problem in ", paste(currentProject()$elementChecking[2])))
-                                            
+                                            h4(icon("check"), "Elements checked"),
+                                            br(),
+                                            h4("4. Choose elements to consider"),
+                                            checkboxGroupInput("ElementGroup", label = "", 
+                                                               choices = colnames(read.csv(paste(getwd(),"Data/",input$folderProjectIn, "/calibrations",dir(paste0("Data/",input$folderProjectIn, "/calibrations"))[1],sep="/"), sep = ";", h = T, dec ="."))[-1],
+                                                               selected = colnames(read.csv(paste(getwd(),"Data/",input$folderProjectIn, "/calibrations",dir(paste0("Data/",input$folderProjectIn, "/calibrations"))[1],sep="/"), sep = ";", h = T, dec ="."))[-1], inline = T),                                            
+                                            br(),
+                                            h4("5. Verification of the non-numeric character of the data"),
+                                            h4(icon("times"), paste0("Problem in ", paste0(currentProject()$errorSession, collapse = " ")))
                                           )
                                           
                                         })
-                                        
                                       }
-                                      
+
                                       
       }
       
@@ -832,10 +890,10 @@ server <- function(input, output, session) {
               
               output$distPlot <- renderPlot({
                 
-                maxY <- max(currentProject()$calibrations[[1]]$rep_data[[1]]$data)
+                maxY <- max(currentProject()$calibrations[[1]]$rep_data[[1]]$data, na.rm = T)
                 
-                minX <- min(currentProject()$calibrations[[1]]$rep_data[[1]]$data[,1])
-                maxX <- max(currentProject()$calibrations[[1]]$rep_data[[1]]$data[,1])
+                minX <- min(currentProject()$calibrations[[1]]$rep_data[[1]]$data[,1], na.rm = T)
+                maxX <- max(currentProject()$calibrations[[1]]$rep_data[[1]]$data[,1], na.rm = T)
                 
                 color <- rainbow(length(currentProject()$listeElem))
                 
@@ -948,10 +1006,10 @@ server <- function(input, output, session) {
               
               output$distPlot <- renderPlot({
                 
-                maxY <- max(currentProject()$calibrations[[1]]$rep_data[[1]]$data)
+                maxY <- max(currentProject()$calibrations[[1]]$rep_data[[1]]$data, na.rm = T)
                 
-                minX <- min(currentProject()$calibrations[[1]]$rep_data[[1]]$data[,1])
-                maxX <- max(currentProject()$calibrations[[1]]$rep_data[[1]]$data[,1])
+                minX <- min(currentProject()$calibrations[[1]]$rep_data[[1]]$data[,1],na.rm = T)
+                maxX <- max(currentProject()$calibrations[[1]]$rep_data[[1]]$data[,1], na.rm = T)
                 
                 color <- rainbow(length(currentProject()$listeElem))
                 
@@ -1265,9 +1323,9 @@ server <- function(input, output, session) {
                       
                       output[[plotname2]] <- renderPlot({
                         
-                        min <- (max(tab$dat[1:length(currentProject()$flag_Calib),x]) - max(tab$dat[(length(currentProject()$flag_Calib)+1):(2*length(currentProject()$flag_Calib)),x]))*0.5
+                        min <- (max(tab$dat[1:length(currentProject()$flag_Calib),x], na.rm = T) - max(tab$dat[(length(currentProject()$flag_Calib)+1):(2*length(currentProject()$flag_Calib)),x],na.rm = T))*0.5
                         
-                        max <- (max(tab$dat[1:length(currentProject()$flag_Calib),x]) + max(tab$dat[(length(currentProject()$flag_Calib)+1):(2*length(currentProject()$flag_Calib)),x]))*1.5
+                        max <- (max(tab$dat[1:length(currentProject()$flag_Calib),x],na.rm = T) + max(tab$dat[(length(currentProject()$flag_Calib)+1):(2*length(currentProject()$flag_Calib)),x],na.rm = T))*1.5
                         
                         PlotIC(currentProject()$calibrationsFiles,tab$dat[1:length(currentProject()$flag_Calib),x],tab$dat[(length(currentProject()$flag_Calib)+1):(2*length(currentProject()$flag_Calib)),x],lengthSeg = 0.1, xlim =c(1,length(currentProject()$flag_Calib)),ylim=c(min, max), ylab = "cps", xlab = currentProject()$calibrationsFiles)
                         
@@ -1390,9 +1448,9 @@ server <- function(input, output, session) {
                       
                       output[[plotname2]] <- renderPlot({
                         
-                        min <- (max(tab$dat[1:length(currentProject()$flag_Calib),x]) - max(tab$dat[(length(currentProject()$flag_Calib)+1):(2*length(currentProject()$flag_Calib)),x]))*0.5
+                        min <- (max(tab$dat[1:length(currentProject()$flag_Calib),x],na.rm = T) - max(tab$dat[(length(currentProject()$flag_Calib)+1):(2*length(currentProject()$flag_Calib)),x],na.rm = T))*0.5
                         
-                        max <- (max(tab$dat[1:length(currentProject()$flag_Calib),x]) + max(tab$dat[(length(currentProject()$flag_Calib)+1):(2*length(currentProject()$flag_Calib)),x]))*1.5
+                        max <- (max(tab$dat[1:length(currentProject()$flag_Calib),x],na.rm = T) + max(tab$dat[(length(currentProject()$flag_Calib)+1):(2*length(currentProject()$flag_Calib)),x],na.rm = T))*1.5
                         
                         PlotIC(currentProject()$calibrationsFiles,tab$dat[1:length(currentProject()$flag_Calib),x],tab$dat[(length(currentProject()$flag_Calib)+1):(2*length(currentProject()$flag_Calib)),x],lengthSeg = 0.1, xlim =c(1,length(currentProject()$flag_Calib)),ylim=c(min, max),ylab = "cps", xlab = currentProject()$calibrationsFiles)
                         
@@ -1516,9 +1574,9 @@ server <- function(input, output, session) {
                       
                       output[[plotname2]] <- renderPlot({
                         
-                        min <- (max(tab$dat[1:length(currentProject()$flag_Calib),x]) - max(tab$dat[(length(currentProject()$flag_Calib)+1):(2*length(currentProject()$flag_Calib)),x]))*0.5
+                        min <- (max(tab$dat[1:length(currentProject()$flag_Calib),x], na.rm = T) - max(tab$dat[(length(currentProject()$flag_Calib)+1):(2*length(currentProject()$flag_Calib)),x], na.rm = T))*0.5
                         
-                        max <- (max(tab$dat[1:length(currentProject()$flag_Calib),x]) + max(tab$dat[(length(currentProject()$flag_Calib)+1):(2*length(currentProject()$flag_Calib)),x]))*1.5
+                        max <- (max(tab$dat[1:length(currentProject()$flag_Calib),x], na.rm = T) + max(tab$dat[(length(currentProject()$flag_Calib)+1):(2*length(currentProject()$flag_Calib)),x], na.rm = T))*1.5
                         
                         PlotIC(currentProject()$calibrationsFiles,tab$dat[1:length(currentProject()$flag_Calib),x],tab$dat[(length(currentProject()$flag_Calib)+1):(2*length(currentProject()$flag_Calib)),x],lengthSeg = 0.1, xlim =c(1,length(currentProject()$flag_Calib)),ylim=c(min, max), ylab = "cps", xlab = "Calibration files")
                         
@@ -2064,9 +2122,9 @@ server <- function(input, output, session) {
                       
                       output[[plotname2]] <- renderPlot({
                         
-                        min <- (max(tab$dat[1:length(currentProject()$flag_Calib),x]) - max(tab$dat[(length(currentProject()$flag_Calib)+1):(2*length(currentProject()$flag_Calib)),x]))*0.5
+                        min <- (max(tab$dat[1:length(currentProject()$flag_Calib),x], na.rm = T) - max(tab$dat[(length(currentProject()$flag_Calib)+1):(2*length(currentProject()$flag_Calib)),x], na.rm = T))*0.5
                         
-                        max <- (max(tab$dat[1:length(currentProject()$flag_Calib),x]) + max(tab$dat[(length(currentProject()$flag_Calib)+1):(2*length(currentProject()$flag_Calib)),x]))*1.5
+                        max <- (max(tab$dat[1:length(currentProject()$flag_Calib),x], na.rm = T) + max(tab$dat[(length(currentProject()$flag_Calib)+1):(2*length(currentProject()$flag_Calib)),x], na.rm = T))*1.5
                         
                         PlotIC(currentProject()$calibrationsFiles,tab$dat[1:length(currentProject()$flag_Calib),x],tab$dat[(length(currentProject()$flag_Calib)+1):(2*length(currentProject()$flag_Calib)),x],lengthSeg = 0.1, xlim =c(1,length(currentProject()$flag_Calib)),ylim=c(min, max), ylab = "cps", xlab = "Calibration files")
                         
@@ -2777,10 +2835,10 @@ server <- function(input, output, session) {
         
         output$distPlotSample <- renderPlot({
           
-          maxY <- max(currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data)
-          
-          minX <- min(currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[,1])
-          maxX <- max(currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[,1])
+          maxY <- max(currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data, na.rm = T) 
+
+          minX <- min(currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[,1], na.rm = T)
+          maxX <- max(currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[,1], na.rm = T)
           
           color <- rainbow(length(currentProject()$listeElem))
           
@@ -2811,7 +2869,14 @@ server <- function(input, output, session) {
         })
         
         output$distPlot2Sample <- renderPlot({
-          plot(dataPlot2Sample$datS[,1], dataPlot2Sample$datS[,grep(input$listeElemSample, colnames(dataPlot2Sample$datS))],  type ="b", ylab = "Nombre de coups", xlab = "Temps (s)")  
+          if(length(which(!is.na(dataPlot2Sample$datS[,grep(input$listeElemSample, colnames(dataPlot2Sample$datS))]))) == 0){
+            plot(-1,-1, xlim = c(0,2), ylim = c(0,1),xlab = "", ylab = "")
+            text(1,0.5, labels = "No data different from NA", cex = 2)
+          }
+          else{
+            plot(dataPlot2Sample$datS[,1], dataPlot2Sample$datS[,grep(input$listeElemSample, colnames(dataPlot2Sample$datS))],  type ="b", ylab = "Nombre de coups", xlab = "Temps (s)")  
+          }
+          
         })
         
         observe({
@@ -2824,6 +2889,7 @@ server <- function(input, output, session) {
             else{
               currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$setVector(bins = currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[Temp0S$t,1], plat = c(currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[Temp1S$t,1],currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[Temp2S$t,1]))
               dataPlot2Sample$datS <- currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$getData(input$CourbeSample,  bins = currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[Temp0S$t,1], plat = c(currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[Temp1S$t,1],currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[Temp2S$t,1]), nom = input$SampleIn2, SimNist = currentProject()$SummaryNist[(nrow(currentProject()$SummaryNist)-1),], summarySession = currentProject()$sessionSummary, model = currentProject()$machineCorrection)        
+              
             }
           } 
         }) # observe
@@ -2837,7 +2903,7 @@ server <- function(input, output, session) {
                 currentProject()$setflagSample(grep(input$SampleIn,currentProject()$samplesFiles), grep(input$SampleIn2, currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files),TRUE)
                 currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$setBins(currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[Temp0S$t,1])
                 currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$setPlat(c(currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[Temp1S$t,1],currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[Temp2S$t,1]))
-                currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2, currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$setDataDesanomaliseConcCorr(bins = currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[Temp0S$t,1], plat = c(currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[Temp1S$t,1],currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[Temp2S$t,1]), nom = input$SampleIn2, summarySession = currentProject()$sessionSummary, model = currentProject()$machineCorrection)
+                currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2, currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$setDataDesanomaliseConcCorr(bins = currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[Temp0S$t,1], plat = c(currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[Temp1S$t,1],currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[Temp2S$t,1]), nom = input$SampleIn2,  SimNist = currentProject()$SummaryNist[(nrow(currentProject()$SummaryNist)-1),], summarySession = currentProject()$sessionSummary, model = currentProject()$machineCorrection)
               }  
             })
           } 
@@ -3193,7 +3259,7 @@ server <- function(input, output, session) {
               
               ylim <- c(min(unlist(lapply(1:length(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_Files), function(i){currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataIntermRaster[[i]][,input$elemRaster]})), na.rm = T),max(unlist(lapply(1:length(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_Files), function(i){currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataIntermRaster[[i]][,input$elemRaster]})), na.rm = T))
               
-              xlim <- c(min(unlist(lapply(1:length(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_Files), function(i){currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataIntermRaster[[i]][,1]}))),max(unlist(lapply(1:length(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_Files), function(i){currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataIntermRaster[[i]][,1]}))))
+              xlim <- c(min(unlist(lapply(1:length(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_Files), function(i){currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataIntermRaster[[i]][,1]}))),max(unlist(lapply(1:length(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_Files), function(i){currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataIntermRaster[[i]][,1]})), na.rm = T))
               
               lapply(1:length(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_Files), function(x){
                 

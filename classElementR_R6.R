@@ -355,9 +355,9 @@ elementR_sample <- R6Class("elementR_sample",
                              
                              ##########################################################
 
-                            setDataDesanomaliseConcCorr = function(bins, plat, nom, summarySession, model){
-                                                                                          
-                                self$setDataDesanomalise(bins, plat) 
+                            setDataDesanomaliseConcCorr = function(bins, plat, nom, SimNist, summarySession, model){
+                              
+                                self$setDataDesanomaliseConc(bins, plat, SimNist)
                                 
                                 rank <- summarySession[which(summarySession[,1] == nom),2]
                                                                 
@@ -403,7 +403,7 @@ elementR_sample <- R6Class("elementR_sample",
                                if(CourbeNIST =="Concentration") {self$setDataDesanomaliseConc(bins, plat, SimNist)
                                                                  return(self$dataPlateauMoinsBlancSupLODNormSansAnomConc) }
                                
-                               if(CourbeNIST == "Conc. corrected") {self$setDataDesanomaliseConcCorr(bins, plat, nom, summarySession, model)
+                               if(CourbeNIST == "Conc. corrected") {self$setDataDesanomaliseConcCorr(bins, plat, nom, SimNist, summarySession, model)
                                                                     return(self$dataPlateauMoinsBlancSupLODNormSansAnomConcCorr)}
                                
                              },
@@ -450,6 +450,20 @@ elementR_project <- R6Class("elementR_project",
                               elementChecking = NA,
                               regressionModel = list(),
                               machineCorrection = NA,
+                              errorSession = NA,
+                              
+                              errorCheck = function(x){
+                                                                  
+                                  errB <- 0
+                                  
+                                  for(i in 1:ncol(x)){
+                                    for(j in 1:nrow(x)){
+                                      if(!is.numeric(x[j,i])){errB <- errB +1 }
+                                    }
+                                  }
+                                
+                                return(errB)
+                              },
                               
                               vectorCheck = function(vecteur1, vecteur2){
                                 
@@ -547,12 +561,11 @@ elementR_project <- R6Class("elementR_project",
                                   
                                 }
                                 if(length(self$calibrationsFiles) > 2){
-                                  
                                   for(j in 1:(Nbelem)){
-                                    Y <- self$SummaryNist[1:length(self$calibrationsFiles),j]               
+                                    
+                                    Y <- self$SummaryNist[1:length(self$calibrationsFiles),j]    
                                     
                                     model <- lm(Y~X)
-                                    
                                     self$regressionModel[[j]] <- model
                                     
                                     # tests 
@@ -591,15 +604,20 @@ elementR_project <- R6Class("elementR_project",
                                 error <- 0
                                 location <- vector()
                                 k <- 1
+                                err <- 0
+                                errPlace <- NULL
                                 
                                 setwd(paste0(folderPath, "/calibrations"))
                                 files <- list.files(, recursive = T)
                                 
-                                temp <- read.csv(files[1], sep = ";")
-                                toCheck <- colnames(temp)[-1]
+                                dat <- read.csv(files[1], sep = ";", h=T)
+                                toCheck <- colnames(dat)[-1]
                                 
                                 for (i in 1: length(files)){
-                                  temp <- colnames(read.csv(files[i], sep = ";"))[-1]
+                                  dat <- read.csv(files[i], sep = ";", h = T)
+                                  err <- self$errorCheck(dat)
+                                  if(err != 0){errPlace <- c(errPlace, files[i])}
+                                  temp <- colnames(dat)[-1]
                                   if(self$vectorCheck(toCheck, temp) == 0){}
                                   if(self$vectorCheck(toCheck, temp) == 1){error <- 1; location[k] <- files[i]; k <- k+1;}   
                                 }
@@ -607,19 +625,29 @@ elementR_project <- R6Class("elementR_project",
                                 setwd(paste0(dirTemp, "/", folderPath, "/samples"))
                                 files <- list.files(, recursive = T)
                                 
-                                for (i in 1: length(files)){
-                                  temp <- colnames(read.csv(files[i], sep = ";"))[-1]
+                                for (i in 1: length(files)){                                  
+                                  dat <- read.csv(files[i], sep = ";", h = T)
+                                  err <- self$errorCheck(dat)
+                                  if(err != 0){errPlace <- c(errPlace, files[i])}
+                                  temp <- colnames(dat)[-1]
                                   if(self$vectorCheck(toCheck, temp) == 0){}
                                   if(self$vectorCheck(toCheck, temp) == 1){error <- 1; location[k] <- files[i]; k <- k+1;}                                  
                                 }  
+                                
                                 setwd(paste0(dirTemp, "/", folderPath, "/settings"))
-                                temp <- colnames(read.csv("Standard.csv", sep = ";"))[-1]
+                                
+                                dat <- read.csv("Standard.csv", sep = ";", h = T)
+                                err <- self$errorCheck(dat[,-1])
+                                if(err != 0){errPlace <- c(errPlace, "standard")}
+                                temp <- colnames(dat)[-1]
                                 if(self$vectorCheck(toCheck, temp) == 0){}
                                 if(self$vectorCheck(toCheck, temp) == 1){error <- 1; location[k] <- "Standard.csv"; k <- k+1;}
                                 
                                 self$elementChecking <- c(error, location)
-                                setwd(dirTemp)
+                                                            
+                                setwd(dirTemp) 
                                 
+                                self$errorSession <- errPlace
                                 
                                 # Etalon
                                 self$EtalonPath <- paste0(folderPath,"/settings")
@@ -654,7 +682,7 @@ elementR_project <- R6Class("elementR_project",
                                 flagTemp <- lapply(1:length(self$samplesFiles), function(x){dir(paste0(folderPath,"/samples/",self$samplesFiles[x]))})
                                 self$flag_Sample <- lapply(1: length(flagTemp), function(x){ r <- rep(0, length(flagTemp[[x]])) ; names(r) <- flagTemp[[x]] ; r})                                
                                 
-                                self$greet()
+#                                 self$greet()
                               },#initialize
                               
                               greet = function() {
@@ -708,7 +736,7 @@ elementR_rep <- R6Class("elementR_rep",
                           
                           setRep_pas = function(){
                             
-                            self$rep_pas <- round(mean(unlist(lapply(1:length(self$rep_data),function(x){sapply(1:(length(self$rep_data[[x]])-1), function(i){self$rep_data[[x]]$data[i+1,1]-self$rep_data[[x]]$data[i,1]})}))),4)
+                            self$rep_pas <- round(mean(unlist(lapply(1:length(self$rep_data),function(x){sapply(1:(length(self$rep_data[[x]])-1), function(i){self$rep_data[[x]]$data[i+1,1]-self$rep_data[[x]]$data[i,1]})})), na.rm = T),4)
                             
                           },
                           
