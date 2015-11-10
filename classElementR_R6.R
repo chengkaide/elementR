@@ -40,7 +40,6 @@ elementR_data <- R6Class("elementR_data",
                            dataPlateauMoinsBlanc = NA,
                            dataPlateauMoinsBlancSupLOD = NA,
                            dataPlateauMoinsBlancSupLODNorm = NA,
-                           dataPlateauMoinsBlancSupLODNormSansAnom = NA,
                            fPath = NA,
                            gg = NA,
                            platBins = NA,
@@ -159,38 +158,7 @@ elementR_data <- R6Class("elementR_data",
                              self$dataPlateauMoinsBlancSupLODNorm <- subDat
                              
                            },#setDataNorm
-                           
-                           ############################################ Data sans anomalie moyenne +/- 2 ecart-types
-                           
-                           setDataDesanomalise = function(bins, plat){
-                             
-#                              print("step4")
-                             
-                             self$setDataNorm(bins, plat)
-                             
-#                              print("step5")
-                             
-                             ValMax <- apply(self$dataPlateauMoinsBlancSupLODNorm[,-1], 2, function(k){mean(k, na.rm = T) + 2*sd(k,na.rm = T)})
-                             
-#                              print("step6")
-                             
-                             ValMin <- apply(self$dataPlateauMoinsBlancSupLODNorm[,-1], 2, function(k){mean(k, na.rm = T) - 2*sd(k,na.rm = T)})
-                             
-#                              print("step7")
-                             
-                             subDat <- do.call(rbind,lapply(1:dim(self$dataPlateauMoinsBlancSupLODNorm[,-1])[1], function(z){
-                               
-                               l <- self$dataPlateauMoinsBlancSupLODNorm[z,-1]
-                               l[l < ValMin | l > ValMax] <- NA
-                               l
-                               
-                             }))
-                             
-#                              print("step8")
-                             
-                             self$dataPlateauMoinsBlancSupLODNormSansAnom <- cbind(as.matrix(self$dataPlateauMoinsBlancSupLODNorm[,1]),subDat)
-                             
-                           }, #setDataDesanomalise
+
                            
                            ############################################
                            ############################################
@@ -250,12 +218,45 @@ elementR_data <- R6Class("elementR_data",
 
 elementR_calibration <- R6Class("elementR_calibration",
                                 inherit = elementR_data,
-                                public = list(
+                                public = list(                                  
+                                  dataPlateauMoinsBlancSupLODNormSansAnom = NA,
                                   data_calibFinalMean = NA,
                                   data_calibFinalSD = NA,
                                   type = "calibration",
                                   plat = c(NA,NA),
                                   bins = NA,
+                                                                    
+                                  ############################################ Data sans anomalie moyenne +/- 2 ecart-types
+                                  
+                                  setDataDesanomalise = function(bins, plat){
+                                    
+                                    #                              print("step4")
+                                    
+                                    self$setDataNorm(bins, plat)
+                                    
+                                    #                              print("step5")
+                                    
+                                    ValMax <- apply(self$dataPlateauMoinsBlancSupLODNorm[,-1], 2, function(k){mean(k, na.rm = T) + 2*sd(k,na.rm = T)})
+                                    
+                                    #                              print("step6")
+                                    
+                                    ValMin <- apply(self$dataPlateauMoinsBlancSupLODNorm[,-1], 2, function(k){mean(k, na.rm = T) - 2*sd(k,na.rm = T)})
+                                    
+                                    #                              print("step7")
+                                    
+                                    subDat <- do.call(rbind,lapply(1:dim(self$dataPlateauMoinsBlancSupLODNorm[,-1])[1], function(z){
+                                      
+                                      l <- self$dataPlateauMoinsBlancSupLODNorm[z,-1]
+                                      l[l < ValMin | l > ValMax] <- NA
+                                      l
+                                      
+                                    }))
+                                    
+                                    #                              print("step8")
+                                    
+                                    self$dataPlateauMoinsBlancSupLODNormSansAnom <- cbind(as.matrix(self$dataPlateauMoinsBlancSupLODNorm[,1]),subDat)
+                                    
+                                  }, #setDataDesanomalise
                                   
                                   ##########################################################
                                   
@@ -305,8 +306,8 @@ elementR_sample <- R6Class("elementR_sample",
                            public = list(
                              type = "sample",
                              standard = NA,
-                             dataPlateauMoinsBlancSupLODNormSansAnomConc = NA,
-                             dataPlateauMoinsBlancSupLODNormSansAnomConcCorr = NA,
+                             dataPlateauMoinsBlancSupLODNormConc = NA,
+                             dataPlateauMoinsBlancSupLODNormConcCorr = NA,
                              platSample = c(NA,NA),
                              binsSample = NA,
                              
@@ -331,51 +332,51 @@ elementR_sample <- R6Class("elementR_sample",
                          
                              ##########################################################
                              
-                             setDataDesanomaliseConc = function(bins, plat, SimNist){
+                             setDataConc = function(bins, plat, SimNist){
                                
 #                                print("step1")
                                
-                               self$setDataDesanomalise(bins, plat)    
+                               self$setDataNorm(bins, plat)    
                                
 #                                print("step2")
                                                            
-                               temp <- sapply(2:ncol(self$dataPlateauMoinsBlancSupLODNormSansAnom), function(x){
+                               temp <- sapply(2:ncol(self$dataPlateauMoinsBlancSupLODNorm), function(x){
                                  
-                                 self$dataPlateauMoinsBlancSupLODNormSansAnom[,x] * self$standard[1,x-1]/ SimNist[x-1]
+                                 self$dataPlateauMoinsBlancSupLODNorm[,x] * self$standard[1,x-1]/ SimNist[x-1]
                                  
                                  })
                                
-                               self$dataPlateauMoinsBlancSupLODNormSansAnomConc <- cbind(as.matrix(self$dataPlateauMoinsBlancSupLODNormSansAnom[,1]),temp)
+                               self$dataPlateauMoinsBlancSupLODNormConc <- cbind(as.matrix(self$dataPlateauMoinsBlancSupLODNorm[,1]),temp)
                                
 #                                print("step3")
                                
-                               colnames(self$dataPlateauMoinsBlancSupLODNormSansAnomConc) <- colnames(self$dataPlateauMoinsBlancSupLODNormSansAnom)
+                               colnames(self$dataPlateauMoinsBlancSupLODNormConc) <- colnames(self$dataPlateauMoinsBlancSupLODNorm)
                                
-                             }, #setDataDesanomaliseConc
+                             }, #setDataConc
                              
                              ##########################################################
 
-                            setDataDesanomaliseConcCorr = function(bins, plat, nom, SimNist, summarySession, model){
+                            setDataConcCorr = function(bins, plat, nom, SimNist, summarySession, model){
                               
-                                self$setDataDesanomaliseConc(bins, plat, SimNist)
+                                self$setDataConc(bins, plat, SimNist)
                                 
                                 rank <- summarySession[which(summarySession[,1] == nom),2]
                                                                 
-                                temp <- sapply(2:ncol(self$dataPlateauMoinsBlancSupLODNormSansAnom), function(x){
+                                temp <- sapply(2:ncol(self$dataPlateauMoinsBlancSupLODNorm), function(x){
 
                                   StandTheoric <- model[[x-1]][1] + rank * model[[x-1]][2]
                                   
-                                  return(self$dataPlateauMoinsBlancSupLODNormSansAnom[,x] * self$standard[1,x-1] / StandTheoric)
+                                  return(self$dataPlateauMoinsBlancSupLODNorm[,x] * self$standard[1,x-1] / StandTheoric)
                                   
                                 })
                                 
-                                self$dataPlateauMoinsBlancSupLODNormSansAnomConcCorr <- cbind(as.matrix(self$dataPlateauMoinsBlancSupLODNormSansAnom[,1]),temp)
+                                self$dataPlateauMoinsBlancSupLODNormConcCorr <- cbind(as.matrix(self$dataPlateauMoinsBlancSupLODNorm[,1]),temp)
                                 
-                                colnames(self$dataPlateauMoinsBlancSupLODNormSansAnomConcCorr) <- colnames(self$dataPlateauMoinsBlancSupLODNormSansAnom)
+                                colnames(self$dataPlateauMoinsBlancSupLODNormConcCorr) <- colnames(self$dataPlateauMoinsBlancSupLODNorm)
 
-                                return(self$dataPlateauMoinsBlancSupLODNormSansAnomConcCorr)
+                                return(self$dataPlateauMoinsBlancSupLODNormConcCorr)
                                 
-                              }, #setDataDesanomaliseConc
+                              }, #setDataConc
                             
                             ##########################################################
                              getData = function(CourbeNIST, bins, plat, nom, SimNist, summarySession, model){
@@ -395,16 +396,13 @@ elementR_sample <- R6Class("elementR_sample",
                                                          return(self$dataPlateauMoinsBlancSupLOD) }
                                                               
                                if(CourbeNIST =="Normalisé") {self$setDataNorm(bins, plat)
-                                                             return(self$dataPlateauMoinsBlancSupLODNorm) }
+                                                             return(self$dataPlateauMoinsBlancSupLODNorm) } 
                                                               
-                               if(CourbeNIST =="Sans Anomalie") {self$setDataDesanomalise(bins, plat)
-                                                                 return(self$dataPlateauMoinsBlancSupLODNormSansAnom) } 
-                                                              
-                               if(CourbeNIST =="Concentration") {self$setDataDesanomaliseConc(bins, plat, SimNist)
-                                                                 return(self$dataPlateauMoinsBlancSupLODNormSansAnomConc) }
+                               if(CourbeNIST =="Concentration") {self$setDataConc(bins, plat, SimNist)
+                                                                 return(self$dataPlateauMoinsBlancSupLODNormConc) }
                                
-                               if(CourbeNIST == "Conc. corrected") {self$setDataDesanomaliseConcCorr(bins, plat, nom, SimNist, summarySession, model)
-                                                                    return(self$dataPlateauMoinsBlancSupLODNormSansAnomConcCorr)}
+                               if(CourbeNIST == "Conc. corrected") {self$setDataConcCorr(bins, plat, nom, SimNist, summarySession, model)
+                                                                    return(self$dataPlateauMoinsBlancSupLODNormConcCorr)}
                                
                              },
                              
@@ -878,10 +876,12 @@ elementR_repSample <- R6Class("elementR_repSample",
                                  }) == T)
                                  
                                  if(length(maxPlace) != 1){maxPlace = maxPlace[length(maxPlace)]}
-                                                                  
+                                 
                                  dataMin <- liste[[minPlace]]
                                  
                                  dataMax <- liste[[maxPlace]]
+                                 
+                                 dimMax <- NULL
                                  
                                  for(i in 1:length(liste)){
                                    
@@ -891,24 +891,36 @@ elementR_repSample <- R6Class("elementR_repSample",
                                    
                                    liste[[i]] <- temp
                                    
+                                   dimMax <- c(dimMax, dim(temp)[1])
+                                   
                                  }
                                  
-                                 for(i in 1:length(liste)){
+                                 dimMax <- max(dimMax)
+                                 
+                                 for(j in 1:length(liste)){
                                    
-                                   temp <- liste[[i]]
-                                   
-                                   while(round(dataMax[dim(dataMax)[1],1]) > round(temp[dim(temp)[1],1])){temp = rbind(temp,c(temp[dim(temp)[1],1]+pas,rep(NA,dim(dataMax)[2]-1)))}
-                                   
-                                   liste[[i]] <- temp
+                                   if(dim(liste[[j]])[1] < dimMax){
+                                     
+                                     ToAdd <-dimMax - dim(liste[[j]])[1]
+                                     
+                                     for (i in 1:ToAdd){
+                                       
+                                       temp <- rbind(liste[[j]], c((liste[[j]][(dim(liste[[j]])[1]),1]+pas),rep(NA,(ncol(liste[[1]])[1]-1))))
+                                       
+                                       liste[[j]] <- temp
+                                     }
+                                     
+                                     
+                                     
+                                   }
                                    
                                  }
-                                                                                               
                                  return(liste)                              
                                },
                                
                                setRep_dataFiltre = function(){
                                  
-                                 self$rep_dataFiltre <- lapply(1:length(self$rep_Files),function(x){self$rep_data[[x]]$dataPlateauMoinsBlancSupLODNormSansAnomConcCorr})
+                                 self$rep_dataFiltre <- lapply(1:length(self$rep_Files),function(x){self$rep_data[[x]]$dataPlateauMoinsBlancSupLODNormConcCorr})
                                                                   
                                },
                                

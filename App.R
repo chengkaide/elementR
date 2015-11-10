@@ -297,9 +297,8 @@ server <- function(input, output, session) {
               write.csv(currentProject()$samples[[x]]$rep_data[[y]]$dataPlateauMoinsBlanc, file = paste0("dataPlateauMoinsBlanc_",temporaire,".csv"))
               write.csv(currentProject()$samples[[x]]$rep_data[[y]]$dataPlateauMoinsBlancSupLOD, file = paste0("dataPlateauMoinsBlancSupLOD_",temporaire,".csv"))
               write.csv(currentProject()$samples[[x]]$rep_data[[y]]$dataPlateauMoinsBlancSupLODNorm, file = paste0("dataPlateauMoinsBlancSupLODNorm__",temporaire,".csv"))
-              write.csv(currentProject()$samples[[x]]$rep_data[[y]]$dataPlateauMoinsBlancSupLODNormSansAnom, file = paste0("dataPlateauMoinsBlancSupLODNormSansAnom_",temporaire,".csv"))
-              write.csv(currentProject()$samples[[x]]$rep_data[[y]]$dataPlateauMoinsBlancSupLODNormSansAnomConc, file = paste0("dataPlateauMoinsBlancSupLODNormSansAnomConc_",temporaire,".csv"))
-              write.csv(currentProject()$samples[[x]]$rep_data[[y]]$dataPlateauMoinsBlancSupLODNormSansAnomConcCorr, file = paste0("dataPlateauMoinsBlancSupLODNormSansAnomConcCorr_",temporaire,".csv"))
+              write.csv(currentProject()$samples[[x]]$rep_data[[y]]$dataPlateauMoinsBlancSupLODNormConc, file = paste0("dataPlateauMoinsBlancSupLODNormConc_",temporaire,".csv"))
+              write.csv(currentProject()$samples[[x]]$rep_data[[y]]$dataPlateauMoinsBlancSupLODNormConcCorr, file = paste0("dataPlateauMoinsBlancSupLODNormConcCorr_",temporaire,".csv"))
             }
           }) #eo lapply
           
@@ -2823,7 +2822,7 @@ server <- function(input, output, session) {
                      ), # column
                      column(6,
                             h4(icon("area-chart"),"Choose Curve to plot"),
-                            selectInput("CourbeSample", label = "", choices =  c("Blanc","Brute", "Plateau","- Moyenne Blanc","> LOD", "Normalisé", "Sans Anomalie", "Concentration", "Conc. corrected"), selected  = "Plateau", width = '100%') 
+                            selectInput("CourbeSample", label = "", choices =  c("Blanc","Brute", "Plateau","- Moyenne Blanc","> LOD", "Normalisé","Concentration", "Conc. corrected"), selected  = "Plateau", width = '100%') 
                      )# column 
                    ) # box
                    
@@ -2903,7 +2902,7 @@ server <- function(input, output, session) {
                 currentProject()$setflagSample(grep(input$SampleIn,currentProject()$samplesFiles), grep(input$SampleIn2, currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files),TRUE)
                 currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$setBins(currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[Temp0S$t,1])
                 currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$setPlat(c(currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[Temp1S$t,1],currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[Temp2S$t,1]))
-                currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2, currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$setDataDesanomaliseConcCorr(bins = currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[Temp0S$t,1], plat = c(currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[Temp1S$t,1],currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[Temp2S$t,1]), nom = input$SampleIn2,  SimNist = currentProject()$SummaryNist[(nrow(currentProject()$SummaryNist)-1),], summarySession = currentProject()$sessionSummary, model = currentProject()$machineCorrection)
+                currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2, currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$setDataConcCorr(bins = currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[Temp0S$t,1], plat = c(currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[Temp1S$t,1],currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[Temp2S$t,1]), nom = input$SampleIn2,  SimNist = currentProject()$SummaryNist[(nrow(currentProject()$SummaryNist)-1),], summarySession = currentProject()$sessionSummary, model = currentProject()$machineCorrection)
               }  
             })
           } 
@@ -3211,11 +3210,14 @@ server <- function(input, output, session) {
                   
                   lapply(1:length(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_Files), function(x){
                     
-                    plot(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataIntermRaster[[x]][,1],currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataIntermRaster[[x]][,input$elemRaster] , xlim = xlim, ylim = ylim, xlab = "temps (s)", ylab = "Concentrations", type = "b", main = "bla", col = rainbow(length(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_Files))[x])
+                    plot(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataIntermRaster[[x]][,1],currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataIntermRaster[[x]][,input$elemRaster] , xlim = xlim, ylim = ylim, xlab = "temps (s)", ylab = "Concentrations", type = "b", main = "", col = rainbow(length(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_Files))[x])
                     
                     par(new = T)
                     
                   })
+                  
+                  
+                  legend("topright", legend = currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_Files, col = rainbow(length(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_Files)), lty = c(1,1))
                   
                   
                 })
@@ -3229,6 +3231,8 @@ server <- function(input, output, session) {
           if(input$typeTraitement == "raster" & currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_flagRaster[1] == 1 & currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_flagRaster[2] != 1){
             
             currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$setrep_dataFinale(type = "raster")
+            
+            
             
             currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$setrep_deplacement(deplace$val)
             
