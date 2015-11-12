@@ -1,9 +1,13 @@
-#' Otholith data preparation Web Application for R
-#'6 object implementation Blabla Blablabla Blablabla BlablablaBlabl
-#' Blablabla Blabla Blablabla Blablabla BlablablaBlablablaBlablabla
-#' Blablabla Blabla Blablabla Blablabla BlablablaBlablablaBlablabla
-#' Blablabla Blabla Blablabla Blablabla BlablablaBlablablaBlablabla
-#' Blablabla Blabla Blablabla Blablabla BlablablaBlablablaBlablabla
+##############################################################>))))°>
+#
+# element-R - 12/11/2015
+#
+# shinydashboard / object version
+# 
+# charlottesirot@free.fr
+# francois.guilhaumon@ird.fr
+#
+#####################################################################
 #'
 #' @seealso \link{elementR-options} for documentation about global options.
 #'
@@ -511,7 +515,7 @@ elementR_project <- R6Class("elementR_project",
                                 
                               },
                               
-                              correction = function(x){
+                              correction = function(){
                                 
                                 Nbelem <- length(self$listeElem)
                                 
@@ -935,10 +939,12 @@ elementR_repSample <- R6Class("elementR_repSample",
                                  if(!is.na(self$rep_dataFiltre) & type == "spot"){
                                    
                                    tabTemp <- rbind(t(as.matrix(sapply(1:length(self$rep_Files), function(x){apply(self$rep_dataFiltre[[x]][,-1],2, mean,na.rm = T)}))),t(as.matrix(sapply(1:length(self$rep_Files), function(x){apply(self$rep_dataFiltre[[x]][,-1],2, sd,na.rm = T)}))))
-                                   
-                                   tabTemp <- cbind(c(rep("mean",length(self$rep_Files)), rep("sd",length(self$rep_Files)),"total mean","total sd"), c(self$rep_Files, self$rep_Files, "-","-"), tabTemp)
-                                   
+                                                                      
+                                   tabTemp <- cbind(c(rep("mean",length(self$rep_Files)), rep("sd",length(self$rep_Files)),"total mean","total sd"), c(self$rep_Files, self$rep_Files, "-","-"), tabTemp)                           
+                                                              
                                    self$rep_dataIntermSpot <- tabTemp
+                                   
+                                   
                                  }
                                  
                                  if(!is.na(self$rep_dataFiltre) & type == "raster"){
@@ -989,7 +995,9 @@ elementR_repSample <- R6Class("elementR_repSample",
                                  
                                  if(!is.na(self$rep_dataFiltre) & type == "spot"){
                                    
-                                   self$rep_dataIntermSpotBis <- rbind(self$rep_dataIntermSpot, c("total mean", "-", apply(do.call(rbind,self$rep_dataFiltre)[,-1], 2, mean, na.rm = T)), c("mean sd","-",apply(do.call(rbind,self$rep_dataFiltre)[,-1], 2, sd, na.rm = T)))
+                                   tabTemp <- matrix(as.numeric(unlist(self$rep_dataIntermSpot)),nrow=nrow(self$rep_dataIntermSpot))
+                                   
+                                   self$rep_dataIntermSpotBis <- rbind(self$rep_dataIntermSpot, c("-", "total mean", apply(tabTemp[1:length(self$rep_Files),-c(1,2)], 2, mean, na.rm = T)), c("-", "total sd",apply(tabTemp[1:length(self$rep_Files),-c(1,2)], 2, sd, na.rm = T)))
                                                                       
                                  }  
                                  

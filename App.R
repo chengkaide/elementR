@@ -1,6 +1,6 @@
 ##############################################################>))))°>
 #
-# element-R - 14/02/2015
+# element-R - 12/11/2015
 #
 # shinydashboard / object version
 # 
@@ -3201,7 +3201,6 @@ server <- function(input, output, session) {
                 
                 output$textRealign5 <- renderPlot({
                   
-                  
                   deplace$val
                   
                   ylim <- c(min(unlist(lapply(1:length(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_Files), function(i){currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataIntermRaster[[i]][,input$elemRaster]})), na.rm = T),max(unlist(lapply(1:length(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_Files), function(i){currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataIntermRaster[[i]][,input$elemRaster]})), na.rm = T))
@@ -3231,8 +3230,7 @@ server <- function(input, output, session) {
           if(input$typeTraitement == "raster" & currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_flagRaster[1] == 1 & currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_flagRaster[2] != 1){
             
             currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$setrep_dataFinale(type = "raster")
-            
-            
+                    
             
             currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$setrep_deplacement(deplace$val)
             
