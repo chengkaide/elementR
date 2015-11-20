@@ -896,7 +896,7 @@ server <- function(input, output, session) {
                 
                 color <- rainbow(length(currentProject()$listeElem))
                 
-                plot(currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$data[,1], currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$data[,2],type ="b", ylab = "Nombre de coups", xlab = "Temps (s)", main = "Raw data", col = color[2], xlim = c(minX, maxX), ylim =c(0,maxY))
+                plot(currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$data[,1], currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$data[,2],type ="b", ylab = "Signal intensity (cps)", xlab = "Time (s)", main = "Raw data", col = color[2], xlim = c(minX, maxX), ylim =c(0,maxY))
                 lapply(3:length(currentProject()$listeElem), function(x){
                   par(new = T)
                   plot(currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$data[,1], currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$data[,x],type ="b", ylab = "", xlab = "", main = "", col = color[x], xlim = c(minX, maxX), ylim =c(0,maxY), axes = F)
@@ -923,7 +923,7 @@ server <- function(input, output, session) {
               })
               
               output$distPlot2 <- renderPlot({
-                plot(dataPlot2$dat[,1], dataPlot2$dat[,grep(input$listeElem, colnames(dataPlot2$dat))],  type ="b", ylab = "Nombre de coups", xlab = "Temps (s)")  
+                plot(dataPlot2$dat[,1], dataPlot2$dat[,grep(input$listeElem, colnames(dataPlot2$dat))],  type ="b", ylab = "Signal intensity (cps)", xlab = "Time (s)")  
               })
               
             }
@@ -1012,7 +1012,7 @@ server <- function(input, output, session) {
                 
                 color <- rainbow(length(currentProject()$listeElem))
                 
-                plot(currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$data[,1], currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$data[,2],type ="b", ylab = "Nombre de coups", xlab = "Temps (s)", main = "Raw data", col = color[2], xlim = c(minX, maxX), ylim =c(0,maxY))
+                plot(currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$data[,1], currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$data[,2],type ="b", ylab = "Signal intensity (cps)", xlab = "Time (s)", main = "Raw data", col = color[2], xlim = c(minX, maxX), ylim =c(0,maxY))
                 lapply(3:length(currentProject()$listeElem), function(x){
                   par(new = T)
                   plot(currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$data[,1], currentProject()$calibrations[[1]]$rep_data[[grep(input$calibrationIn, currentProject()$calibrationsFiles)]]$data[,x],type ="b", ylab = "", xlab = "", main = "", col = color[x], xlim = c(minX, maxX), ylim =c(0,maxY), axes = F)
@@ -1039,7 +1039,7 @@ server <- function(input, output, session) {
               })
               
               output$distPlot2 <- renderPlot({
-                plot(dataPlot2$dat[,1], dataPlot2$dat[,grep(input$listeElem, colnames(dataPlot2$dat))],  type ="b", ylab = "Nombre de coups", xlab = "Temps (s)")  
+                plot(dataPlot2$dat[,1], dataPlot2$dat[,grep(input$listeElem, colnames(dataPlot2$dat))],  type ="b", ylab = "Signal intensity (cps)", xlab = "Time (s)")  
               })
               
             }
@@ -2806,8 +2806,8 @@ server <- function(input, output, session) {
                    br(),
                    column(1),
                    column(11,
-                          sliderInput("binsSample","Limites du Blanc", value = value1S, min = minBS, max = maxBS, step = step, width = '95%'),
-                          sliderInput("platSample","Limites du plateau", value = value2S, min = minPS, max = maxPS, step = step, width = '95%')
+                          sliderInput("binsSample","Machine noise limits", value = value1S, min = minBS, max = maxBS, step = step, width = '95%'),
+                          sliderInput("platSample","Plateau limits", value = value2S, min = minPS, max = maxPS, step = step, width = '95%')
                    )
             ),
             column(4,plotOutput("distPlot2Sample", height = '400px'),
@@ -2841,7 +2841,7 @@ server <- function(input, output, session) {
           
           color <- rainbow(length(currentProject()$listeElem))
           
-          plot(currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[,1], currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[,2],type ="b", ylab = "Nombre de coups", xlab = "Temps (s)", main = "Raw data", col = color[2], xlim = c(minX, maxX), ylim =c(0,maxY))
+          plot(currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[,1], currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[,2],type ="b", ylab = "Signal intensity (cps)", xlab = "Time (s)", main = "Raw data", col = color[2], xlim = c(minX, maxX), ylim =c(0,maxY))
           lapply(3:length(currentProject()$listeElem), function(x){
             par(new = T)
             plot(currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[,1], currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_data[[grep(input$SampleIn2,currentProject()$samples[[grep(input$SampleIn,currentProject()$samplesFiles)]]$rep_Files)]]$data[,x],type ="b", ylab = "", xlab = "", main = "", col = color[x], xlim = c(minX, maxX), ylim =c(0,maxY), axes = F)
@@ -2873,7 +2873,7 @@ server <- function(input, output, session) {
             text(1,0.5, labels = "No data different from NA", cex = 2)
           }
           else{
-            plot(dataPlot2Sample$datS[,1], dataPlot2Sample$datS[,grep(input$listeElemSample, colnames(dataPlot2Sample$datS))],  type ="b", ylab = "Nombre de coups", xlab = "Temps (s)")  
+            plot(dataPlot2Sample$datS[,1], dataPlot2Sample$datS[,grep(input$listeElemSample, colnames(dataPlot2Sample$datS))],  type ="b", ylab = "Signal intensity (cps)", xlab = "Time (s)")  
           }
           
         })
@@ -3209,7 +3209,7 @@ server <- function(input, output, session) {
                   
                   lapply(1:length(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_Files), function(x){
                     
-                    plot(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataIntermRaster[[x]][,1],currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataIntermRaster[[x]][,input$elemRaster] , xlim = xlim, ylim = ylim, xlab = "temps (s)", ylab = "Concentrations", type = "b", main = "", col = rainbow(length(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_Files))[x])
+                    plot(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataIntermRaster[[x]][,1],currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataIntermRaster[[x]][,input$elemRaster] , xlim = xlim, ylim = ylim, xlab = "Time (s)", ylab = "Concentrations", type = "b", main = "", col = rainbow(length(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_Files))[x])
                     
                     par(new = T)
                     
@@ -3265,7 +3265,7 @@ server <- function(input, output, session) {
               
               lapply(1:length(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_Files), function(x){
                 
-                plot(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataIntermRaster[[x]][,1],currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataIntermRaster[[x]][,input$elemRaster] , xlim = xlim, ylim = ylim, xlab = "temps (s)", ylab = "Concentrations", type = "b", col = rainbow(length(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_Files))[x])
+                plot(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataIntermRaster[[x]][,1],currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataIntermRaster[[x]][,input$elemRaster] , xlim = xlim, ylim = ylim, xlab = "Time (s)", ylab = "Concentrations", type = "b", col = rainbow(length(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_Files))[x])
                 
                 par(new = T)
                 
