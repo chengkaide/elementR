@@ -534,32 +534,33 @@ elementR_project <- R6Class("elementR_project",
                                 
                                 if(length(self$calibrationsFiles) == 1){
                                   
-                                  for(j in 1:(Nbelem)){
-                                    
-                                    slope <- 0
-                                    
-                                    intercept <- Y <- self$SummaryNist[1,j]
-                                    
-                                    tableau[j,5:6] <- c(intercept , slope)
-                                    
-                                    self$regressionModel[[j]] <- c(intercept , slope)
-                                    
-                                  }
+#                                   for(j in 1:(Nbelem)){
+#                                     
+#                                     slope <- 0
+#                                     
+#                                     intercept <- Y <- self$SummaryNist[1,j]
+#                                     
+#                                     tableau[j,5:6] <- c(intercept , slope)
+#                                     
+#                                     self$regressionModel[[j]] <- c(intercept , slope)
+#                                     
+#                                   }
                                   
                                 }
-                                if(length(self$calibrationsFiles) == 2){
+                                if(length(self$calibrationsFiles) == 2){                                
                                   
-                                  for(j in 1:(Nbelem)){
-                                    Y <- self$SummaryNist[1:length(self$calibrationsFiles),j]               
-                                    
-                                    slope <- (Y[2] - Y[1])/(X[1] - X[2])
-                                    
-                                    intercept <- Y[1] - slope*X[1]
-                                    
-                                    tableau[j,5:6] <- c(intercept , slope)
-                                    
-                                    self$regressionModel[[j]] <- c(intercept , slope)
-                                  }  
+                                  
+#                                   for(j in 1:(Nbelem)){
+#                                     Y <- self$SummaryNist[1:length(self$calibrationsFiles),j]               
+#                                     
+#                                     slope <- (Y[2] - Y[1])/(X[1] - X[2])
+#                                     
+#                                     intercept <- Y[1] - slope*X[1]
+#                                     
+#                                     tableau[j,5:6] <- c(intercept , slope)
+#                                     
+#                                     self$regressionModel[[j]] <- c(intercept , slope)
+#                                   }  
                                   
                                 }
                                 if(length(self$calibrationsFiles) > 2){
@@ -579,7 +580,14 @@ elementR_project <- R6Class("elementR_project",
                                     else{
                                       
                                       res_test[1] <- shapiro.test(model.res)$p.value
-                                      res_test[2] <- hmctest(model)$p.value
+                                      
+                                      if(length(self$calibrationsFiles) == 3){
+                                        res_test[2] <- NA
+                                      }
+                                      else{
+                                        res_test[2] <- hmctest(model)$p.value
+                                      }
+                                      
                                       res_test[3] <- dwtest(model)$p.value
                                       res_test[4] <- summary(model)$coefficients[2,4]
                                       res_test[5:6] <- summary(model)$coefficients[,1]
