@@ -873,7 +873,7 @@ server <- function(input, output, session) {
                            width  = 15,
                            column(6,
                                   h4(icon("cubes"),"Choose Element to consider"),
-                                  selectInput("listeElem", label = "", choices =  currentProject()$listeElem, selected  = "Li7", width = '100%') 
+                                  selectInput("listeElem", label = "", choices =  currentProject()$listeElem, selected  = "Ca43", width = '100%') 
                            ), # column
                            column(6,
                                   h4(icon("area-chart"),"Choose Curve to plot"),
@@ -989,7 +989,7 @@ server <- function(input, output, session) {
                            width  = 15,
                            column(6,
                                   h4(icon("cubes"),"Choose Element to consider"),
-                                  selectInput("listeElem", label = "", choices =  currentProject()$listeElem, selected  = "Li7", width = '100%') 
+                                  selectInput("listeElem", label = "", choices =  currentProject()$listeElem, selected  = "Ca43", width = '100%') 
                            ), # column
                            column(6,
                                   h4(icon("area-chart"),"Choose Curve to plot"),
@@ -2818,7 +2818,7 @@ server <- function(input, output, session) {
                      width  = 15,
                      column(6,
                             h4(icon("cubes"),"Choose Element to consider"),
-                            selectInput("listeElemSample", label = "", choices =  currentProject()$listeElem, selected  = "Li7", width = '100%') 
+                            selectInput("listeElemSample", label = "", choices =  currentProject()$listeElem, selected  = "Ca43", width = '100%') 
                      ), # column
                      column(6,
                             h4(icon("area-chart"),"Choose Curve to plot"),
