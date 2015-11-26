@@ -454,13 +454,15 @@ elementR_project <- R6Class("elementR_project",
                               machineCorrection = NA,
                               errorSession = NA,
                               
-                              errorCheck = function(x){
+                              errorCheck = function(x, col){
                                                                   
                                   errB <- 0
                                   
-                                  for(i in 1:ncol(x)){
+                                  for(i in col){
+
                                     for(j in 1:nrow(x)){
-                                      if(!is.numeric(x[j,i])){errB <- errB +1 }
+                                      if(!is.numeric(x[j,i])){errB <- errB +1}
+                                      
                                     }
                                   }
                                 
@@ -625,7 +627,7 @@ elementR_project <- R6Class("elementR_project",
                                 
                                 for (i in 1: length(files)){
                                   dat <- read.csv(files[i], sep = ";", h = T)
-                                  err <- self$errorCheck(dat)
+                                  err <- self$errorCheck(dat, col = 1:ncol(dat))
                                   if(err != 0){errPlace <- c(errPlace, files[i])}
                                   temp <- colnames(dat)[-1]
                                   if(self$vectorCheck(toCheck, temp) == 0){}
@@ -637,7 +639,7 @@ elementR_project <- R6Class("elementR_project",
                                 
                                 for (i in 1: length(files)){                                  
                                   dat <- read.csv(files[i], sep = ";", h = T)
-                                  err <- self$errorCheck(dat)
+                                  err <- self$errorCheck(dat, col = 1:ncol(dat))
                                   if(err != 0){errPlace <- c(errPlace, files[i])}
                                   temp <- colnames(dat)[-1]
                                   if(self$vectorCheck(toCheck, temp) == 0){}
@@ -647,7 +649,7 @@ elementR_project <- R6Class("elementR_project",
                                 setwd(paste0(dirTemp, "/", folderPath, "/settings"))
                                 
                                 dat <- read.csv("Standard.csv", sep = ";", h = T)
-                                err <- self$errorCheck(dat[,-1])
+                                err <- self$errorCheck(dat, col = 2:ncol(dat))
                                 if(err != 0){errPlace <- c(errPlace, "standard")}
                                 temp <- colnames(dat)[-1]
                                 if(self$vectorCheck(toCheck, temp) == 0){}

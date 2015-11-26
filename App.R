@@ -2924,6 +2924,10 @@ server <- function(input, output, session) {
   #######################
   ##### REALIGNEMENT ####
   #######################
+
+  deplace <- reactiveValues(val = NULL)
+  vectResults <- reactiveValues(temp = c("a","b","c","d","e","f","g","h","i","j"))
+  correl <- reactiveValues(temp = NULL)
   
   observe({
     input$ValiderSample
@@ -3048,276 +3052,10 @@ server <- function(input, output, session) {
         }
       }) # observe
       
-      deplace <- reactiveValues(val = NULL)
-      vectResults <- reactiveValues(temp = c("a","b","c","d","e","f","g","h","i","j"))
-      correl <- reactiveValues(temp = NULL)
+
+          
       
-      observe({
-        if(is.null(input$typeTraitement)){}
-        if(is.null(input$selectRealign)){}
-        else{ 
-          input$MoyenneSpot
-          input$DemoyennerSpot
-          input$SupprSpot
-          input$MoyenneRaster
-          input$DemoyennerRaster
-          input$SauvegarderReal
-          input$Suppr
-          input$SauvegarderSpot
-          
-          if(input$typeTraitement == "spot" & currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_flagSpot[1] == 0 & currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_flagSpot[1] != 1 & currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_flagRaster[2] != 1){   
-            
-            currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$setRep_dataInterm(type = "spot")
-            
-            output$textRealign2 <- renderUI({
-              box(background = "black", width = 3, height = 200,
-                  column(12,
-                         fluidRow(
-                           h3("Spot averaging :"),
-                           actionButton("MoyenneSpot", "Mean"))
-                         )                    
-              ) # box                                                                             
-            })
-            
-            output$textRealign3 <- renderTable({  
-              
-              tableau <- currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataIntermSpot
-              
-              return(tableau)
-              
-            }, digits = 5)
-            
-            output$textRealign5 <- renderPlot({NULL}, bg = "transparent")
-            
-          } # if
-          
-          if(input$typeTraitement == "spot" & currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_flagSpot[1] == 1 & currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_flagSpot[2] != 1){  
-            
-            currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$setrep_dataFinale(type = "spot") 
-            
-            output$textRealign2 <- renderUI({
-              box(background = "black", width = 3, height = 200,
-                  column(12,
-                         fluidRow(
-                           h3("Spot averaging :"),
-                           p(actionButton("MoyenneSpot", "Mean"),actionButton("SauvegarderSpot", "Save averaging"))
-                           
-                         )                               
-                  )                   
-              ) # box                                                                             
-            })
-            
-            output$textRealign3 <- renderTable({  
-              
-              tableau <- currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataIntermSpotBis
-              
-              return(tableau)
-              
-            }, digits = 5)
-            
-            output$textRealign5 <- renderPlot({NULL}, bg = "transparent")
-          } # if
-          
-          if(input$typeTraitement == "spot" & currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_flagSpot[2] == 1){
-            
-            output$textRealign2 <- renderUI({
-              box(background = "black", width = 3, height = 100,
-                  column(12,
-                         actionButton("SupprSpot", "Delete mean")
-                  )                               
-                  
-              ) # box                                                                             
-            })
-            
-            output$textRealign5 <- renderPlot({NULL}, bg = "transparent")
-            
-          } # if
-          
-          if(input$typeTraitement == "spot" & currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_flagRaster[2] == 1){
-            
-            output$textRealign2 <- renderUI({
-              box(background = "black", width = 3, height = 100,
-                  column(12,
-                         h3("Already validated with the raster protocole")
-                  )                               
-                  
-              ) # box                                                                             
-            })            
-          } # if
-          
-          if(input$typeTraitement == "raster" & currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_flagRaster[1] == 0 & currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_flagRaster[1] != 1 & currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_flagSpot[2] != 1){
-            
-            output$textRealign3 <- renderTable({NULL})  
-            
-            output$textRealign2 <- renderUI({
-              
-              box(background = "black", width = 3, height = 250 + 200 * (length(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_Files)-1),
-                  column(12,                         
-                         h3("Rasters realignment :"),
-                         br(),
-                         selectInput("elemRaster","Element to realign",choices = currentProject()$listeElem, selected = "Ba138"),
-                         plot_output_list <- lapply(1:length(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_Files), function(i) {
-                           plotname <- paste("plot", i, sep="")
-                           numericInput(vectResults$temp[i],currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_Files[i],value = 0)
-                           
-                         }),
-                         br(),
-                         actionButton("MoyenneRaster", "Mean")
-                  ) # column                   
-              ) # box
-            }) # textRealign2
-            
-            for (i in 1:length(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_Files)) {
-              local({
-                my_i <- i
-                plotname <- paste("plot", my_i, sep="")
-                
-                output[[plotname]] <- renderUI({
-                  numericInput(vectResults$temp[i],currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_Files[i],value = 0)
-                })
-              })
-            }
-            
-            observe({
-              ## François ??
-              for (i in 1:length(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_Files)){
-                deplace$val[i] <- eval(parse(text = paste("input$",vectResults$temp[i],sep="")))
-              }
-            }) # observe
-            
-            observe({
-              
-              if(is.null(deplace$val)){}
-              else{
-                
-                deplace$val 
-                
-                if(temoin$temp[[1]] == 1){
-                  currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$setRep_dataInterm(type = "raster", decalage = deplace$val, temoin = 1, data = NULL)
-                }
-                if(temoin$temp[[1]] == 2){                  
-                  currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$setRep_dataInterm(type = "raster", decalage = deplace$val, temoin = 2, data = currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataFiltre)
-                }
-                
-                output$textRealign5 <- renderPlot({
-                  
-                  deplace$val
-                  
-                  ylim <- c(min(unlist(lapply(1:length(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_Files), function(i){currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataIntermRaster[[i]][,input$elemRaster]})), na.rm = T),max(unlist(lapply(1:length(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_Files), function(i){currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataIntermRaster[[i]][,input$elemRaster]})), na.rm = T))
-                  
-                  xlim <- c(min(unlist(lapply(1:length(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_Files), function(i){currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataIntermRaster[[i]][,1]}))),max(unlist(lapply(1:length(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_Files), function(i){currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataIntermRaster[[i]][,1]}))))
-                  
-                  lapply(1:length(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_Files), function(x){
-                    
-                    plot(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataIntermRaster[[x]][,1],currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataIntermRaster[[x]][,input$elemRaster] , xlim = xlim, ylim = ylim, xlab = "Time (s)", ylab = "Concentrations", type = "b", main = "", col = rainbow(length(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_Files))[x])
-                    
-                    par(new = T)
-                    
-                  })
-                  
-                  
-                  legend("topright", legend = currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_Files, col = rainbow(length(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_Files)), lty = c(1,1))
-                  
-                  
-                })
-                
-                
-              }
-            }) 
-            
-          } # if
-          
-          if(input$typeTraitement == "raster" & currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_flagRaster[1] == 1 & currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_flagRaster[2] != 1){
-            
-            currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$setrep_dataFinale(type = "raster")
-                    
-            
-            currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$setrep_deplacement(deplace$val)
-            
-            if(temoin$temp[[1]] == 1){value3 <- 15; value4 <- 60}
-            if(temoin$temp[[1]] == 2){value3 <- currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_vitesse; value4 <- currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_diam}         
-            
-            output$textRealign3 <- renderTable({NULL})  
-            
-            output$textRealign2 <- renderUI({
-              
-              box(background = "black", width = 3, height = 175,
-                  column(12,  
-                         fluidRow(
-                           column(6, h3("Rasters realignment :")), 
-                           column(6, h3(icon("check"), ""))
-                         ),
-                         br(),
-                         fluidRow(
-                           column(3, actionButton("DemoyennerRaster","Delete averaging")), 
-                           column(6, actionButton("SauvegarderReal","Save averaging"))
-                         )
-                         
-                  ) # column                   
-              ) # box
-            }) 
-            
-            output$textRealign5 <- renderPlot({
-              
-              ylim <- c(min(unlist(lapply(1:length(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_Files), function(i){currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataIntermRaster[[i]][,input$elemRaster]})), na.rm = T),max(unlist(lapply(1:length(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_Files), function(i){currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataIntermRaster[[i]][,input$elemRaster]})), na.rm = T))
-              
-              xlim <- c(min(unlist(lapply(1:length(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_Files), function(i){currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataIntermRaster[[i]][,1]}))),max(unlist(lapply(1:length(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_Files), function(i){currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataIntermRaster[[i]][,1]})), na.rm = T))
-              
-              lapply(1:length(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_Files), function(x){
-                
-                plot(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataIntermRaster[[x]][,1],currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataIntermRaster[[x]][,input$elemRaster] , xlim = xlim, ylim = ylim, xlab = "Time (s)", ylab = "Concentrations", type = "b", col = rainbow(length(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_Files))[x])
-                
-                par(new = T)
-                
-              })
-              
-              plot(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataFinaleCorrel[,1],currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataFinaleCorrel[,input$elemRaster], xlim = xlim, ylim = ylim, xlab = "", ylab = "", type = "b")
-              
-            })  
-            
-            
-            
-          } # if
-          
-          if(input$typeTraitement == "raster" & currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_flagRaster[2] == 1){
-            
-            output$textRealign2 <- renderUI({
-              
-              box(background = "black", width = 3, height = 100,
-                  column(12,
-                         actionButton("Suppr","Delete Realignment")
-                  )
-              )
-              
-            }) # textRealign2
-          } # if
-          
-          if(input$typeTraitement == "raster" & currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_flagSpot[2] == 1){
-            
-            output$textRealign2 <- renderUI({
-              box(background = "black", width = 3, height = 100,
-                  column(12,
-                         h3("Already validated with the spot protocole")
-                  )                               
-                  
-              ) # box                                                                             
-            })
-            
-            output$textRealign3 <- renderTable({  
-              
-              tableau <- rbind(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataIntermSpotBis, currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataIntermSpotBis)
-              
-              return(tableau)
-              
-            }, digits = 5)
-            
-            output$textRealign5 <- renderPlot({NULL}, bg = "transparent")
-          } # if
-          
-          
-        }
-        
-      })
+      
     }
     if(length(which(temoinSample$temp == T)) == 0){
       output$textRealign <- renderUI({NULL})
@@ -3330,6 +3068,283 @@ server <- function(input, output, session) {
     }
     
   })
+
+  observe({
+  input$ValiderSample
+  
+    if(is.null(input$typeTraitement)){}
+    if(is.null(input$selectRealign)){}
+    else{ 
+      
+      if(length(which(temoinSample$temp == T)) != 0){
+      input$MoyenneSpot
+      input$DemoyennerSpot
+      input$SupprSpot
+      input$MoyenneRaster
+      input$DemoyennerRaster
+      input$SauvegarderReal
+      input$Suppr
+      input$SauvegarderSpot
+      
+      if(input$typeTraitement == "spot" & currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_flagSpot[1] == 0 & currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_flagSpot[1] != 1 & currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_flagRaster[2] != 1){   
+        
+        currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$setRep_dataInterm(type = "spot")
+        
+        output$textRealign2 <- renderUI({
+          box(background = "black", width = 3, height = 200,
+              column(12,
+                     fluidRow(
+                       h3("Spot averaging :"),
+                       actionButton("MoyenneSpot", "Mean"))
+              )                    
+          ) # box                                                                             
+        })
+        
+        output$textRealign3 <- renderTable({  
+          
+          tableau <- currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataIntermSpot
+          
+          return(tableau)
+          
+        }, digits = 5)
+        
+        output$textRealign5 <- renderPlot({NULL}, bg = "transparent")
+        
+      } # if
+      
+      if(input$typeTraitement == "spot" & currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_flagSpot[1] == 1 & currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_flagSpot[2] != 1){  
+        
+        currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$setrep_dataFinale(type = "spot") 
+        
+        output$textRealign2 <- renderUI({
+          box(background = "black", width = 3, height = 200,
+              column(12,
+                     fluidRow(
+                       h3("Spot averaging :"),
+                       p(actionButton("MoyenneSpot", "Mean"),actionButton("SauvegarderSpot", "Save averaging"))
+                       
+                     )                               
+              )                   
+          ) # box                                                                             
+        })
+        
+        output$textRealign3 <- renderTable({  
+          
+          tableau <- currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataIntermSpotBis
+          
+          return(tableau)
+          
+        }, digits = 5)
+        
+        output$textRealign5 <- renderPlot({NULL}, bg = "transparent")
+      } # if
+      
+      if(input$typeTraitement == "spot" & currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_flagSpot[2] == 1){
+        
+        output$textRealign2 <- renderUI({
+          box(background = "black", width = 3, height = 100,
+              column(12,
+                     actionButton("SupprSpot", "Delete mean")
+              )                               
+              
+          ) # box                                                                             
+        })
+        
+        output$textRealign5 <- renderPlot({NULL}, bg = "transparent")
+        
+      } # if
+      
+      if(input$typeTraitement == "spot" & currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_flagRaster[2] == 1){
+        
+        output$textRealign2 <- renderUI({
+          box(background = "black", width = 3, height = 100,
+              column(12,
+                     h3("Already validated with the raster protocole")
+              )                               
+              
+          ) # box                                                                             
+        })            
+      } # if
+      
+      if(input$typeTraitement == "raster" & currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_flagRaster[1] == 0 & currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_flagRaster[1] != 1 & currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_flagSpot[2] != 1){
+        
+        
+        
+        
+        output$textRealign3 <- renderTable({NULL})  
+        
+        output$textRealign2 <- renderUI({
+          
+          box(background = "black", width = 3, height = 250 + 200 * (length(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_Files)-1),
+              column(12,                         
+                     h3("Rasters realignment :"),
+                     br(),
+                     selectInput("elemRaster","Element to realign",choices = currentProject()$listeElem, selected = "Ba138"),
+                     plot_output_list <- lapply(1:length(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_Files), function(i) {
+                       plotname <- paste("plot", i, sep="")
+                       numericInput(vectResults$temp[i],currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_Files[i],value = 0)
+                       
+                     }),
+                     br(),
+                     actionButton("MoyenneRaster", "Mean")
+              ) # column                   
+          ) # box
+        }) # textRealign2
+        
+        for (i in 1:length(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_Files)) {
+          local({
+            my_i <- i
+            plotname <- paste("plot", my_i, sep="")
+            
+            output[[plotname]] <- renderUI({
+              numericInput(vectResults$temp[i],currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_Files[i],value = 0)
+            })
+          })
+        }
+        
+        observe({
+          ## François ??
+          for (i in 1:length(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_Files)){
+            deplace$val[i] <- eval(parse(text = paste("input$",vectResults$temp[i],sep="")))
+          }
+        }) # observe
+        
+        observe({
+          
+          if(is.null(deplace$val)){}
+          else{
+            
+            deplace$val 
+            
+            if(temoin$temp[[1]] == 1){
+              currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$setRep_dataInterm(type = "raster", decalage = deplace$val, temoin = 1, data = NULL)
+            }
+            if(temoin$temp[[1]] == 2){                  
+              currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$setRep_dataInterm(type = "raster", decalage = deplace$val, temoin = 2, data = currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataFiltre)
+            }
+            
+            output$textRealign5 <- renderPlot({
+              
+              deplace$val
+              
+              ylim <- c(min(unlist(lapply(1:length(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_Files), function(i){currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataIntermRaster[[i]][,input$elemRaster]})), na.rm = T),max(unlist(lapply(1:length(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_Files), function(i){currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataIntermRaster[[i]][,input$elemRaster]})), na.rm = T))
+              
+              xlim <- c(min(unlist(lapply(1:length(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_Files), function(i){currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataIntermRaster[[i]][,1]}))),max(unlist(lapply(1:length(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_Files), function(i){currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataIntermRaster[[i]][,1]}))))
+              
+              lapply(1:length(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_Files), function(x){
+                
+                #                     print(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataIntermRaster[[x]])
+                
+                plot(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataIntermRaster[[x]][,1],currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataIntermRaster[[x]][,input$elemRaster] , xlim = xlim, ylim = ylim, xlab = "Time (s)", ylab = "Concentrations", type = "b", main = "", col = rainbow(length(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_Files))[x])
+                
+                par(new = T)
+                
+              })
+              
+              
+              legend("topright", legend = currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_Files, col = rainbow(length(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_Files)), lty = c(1,1))
+              
+              
+            })
+            
+            
+          }
+        }) 
+        
+      } # if
+      
+      if(input$typeTraitement == "raster" & currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_flagRaster[1] == 1 & currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_flagRaster[2] != 1){
+        
+        currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$setrep_dataFinale(type = "raster")                    
+        
+        currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$setrep_deplacement(deplace$val)
+        
+        if(temoin$temp[[1]] == 1){value3 <- 15; value4 <- 60}
+        if(temoin$temp[[1]] == 2){value3 <- currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_vitesse; value4 <- currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_diam}         
+        
+        output$textRealign3 <- renderTable({NULL})  
+        
+        output$textRealign2 <- renderUI({
+          
+          box(background = "black", width = 3, height = 175,
+              column(12,  
+                     fluidRow(
+                       column(6, h3("Rasters realignment :")), 
+                       column(6, h3(icon("check"), ""))
+                     ),
+                     br(),
+                     fluidRow(
+                       column(3, actionButton("DemoyennerRaster","Delete averaging")), 
+                       column(6, actionButton("SauvegarderReal","Save averaging"))
+                     )
+                     
+              ) # column                   
+          ) # box
+        }) 
+        
+        output$textRealign5 <- renderPlot({
+          
+          ylim <- c(min(unlist(lapply(1:length(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_Files), function(i){currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataIntermRaster[[i]][,input$elemRaster]})), na.rm = T),max(unlist(lapply(1:length(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_Files), function(i){currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataIntermRaster[[i]][,input$elemRaster]})), na.rm = T))
+          
+          xlim <- c(min(unlist(lapply(1:length(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_Files), function(i){currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataIntermRaster[[i]][,1]}))),max(unlist(lapply(1:length(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_Files), function(i){currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataIntermRaster[[i]][,1]})), na.rm = T))
+          
+          lapply(1:length(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_Files), function(x){
+            
+            plot(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataIntermRaster[[x]][,1],currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataIntermRaster[[x]][,input$elemRaster] , xlim = xlim, ylim = ylim, xlab = "Time (s)", ylab = "Concentrations", type = "b", col = rainbow(length(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_Files))[x])
+            
+            par(new = T)
+            
+          })
+          
+          plot(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataFinaleCorrel[,1],currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataFinaleCorrel[,input$elemRaster], xlim = xlim, ylim = ylim, xlab = "", ylab = "", type = "b")
+          
+        })  
+        
+        
+        
+      } # if
+      
+      if(input$typeTraitement == "raster" & currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_flagRaster[2] == 1){
+        
+        output$textRealign2 <- renderUI({
+          
+          box(background = "black", width = 3, height = 100,
+              column(12,
+                     actionButton("Suppr","Delete Realignment")
+              )
+          )
+          
+        }) # textRealign2
+      } # if
+      
+      if(input$typeTraitement == "raster" & currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_flagSpot[2] == 1){
+        
+        output$textRealign2 <- renderUI({
+          box(background = "black", width = 3, height = 100,
+              column(12,
+                     h3("Already validated with the spot protocole")
+              )                               
+              
+          ) # box                                                                             
+        })
+        
+        output$textRealign3 <- renderTable({  
+          
+          tableau <- rbind(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataIntermSpotBis, currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataIntermSpotBis)
+          
+          return(tableau)
+          
+        }, digits = 5)
+        
+        output$textRealign5 <- renderPlot({NULL}, bg = "transparent")
+      } # if
+      
+      }
+      
+    }
+    
+  })
+
   
 }#eo server
 
