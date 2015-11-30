@@ -1238,7 +1238,7 @@ server <- function(input, output, session) {
               }
               
             }
-          })          
+          })          # ici
           
           observe({
             if(is.null(input$CorrectAll)){
@@ -3168,9 +3168,6 @@ server <- function(input, output, session) {
       
       if(input$typeTraitement == "raster" & currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_flagRaster[1] == 0 & currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_flagRaster[1] != 1 & currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_flagSpot[2] != 1){
         
-        
-        
-        
         output$textRealign3 <- renderTable({NULL})  
         
         output$textRealign2 <- renderUI({
@@ -3203,14 +3200,21 @@ server <- function(input, output, session) {
         }
         
         observe({
-          ## François ??
-          for (i in 1:length(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_Files)){
-            deplace$val[i] <- eval(parse(text = paste("input$",vectResults$temp[i],sep="")))
-          }
+            if(is.null(eval(parse(text = paste("input$",vectResults$temp[length(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_Files)],sep=""))))){}
+            else{
+              
+              ## François ??
+              for (i in 1:length(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_Files)){ 
+                deplace$val[i] <- eval(parse(text = paste("input$",vectResults$temp[i],sep="")))
+              }
+            }
+
+          
+          
+
         }) # observe
         
         observe({
-          
           if(is.null(deplace$val)){}
           else{
             
@@ -3233,7 +3237,7 @@ server <- function(input, output, session) {
               
               lapply(1:length(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_Files), function(x){
                 
-                #                     print(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataIntermRaster[[x]])
+#                                     print(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataIntermRaster[[x]])
                 
                 plot(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataIntermRaster[[x]][,1],currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataIntermRaster[[x]][,input$elemRaster] , xlim = xlim, ylim = ylim, xlab = "Time (s)", ylab = "Concentrations", type = "b", main = "", col = rainbow(length(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_Files))[x])
                 
@@ -3305,6 +3309,23 @@ server <- function(input, output, session) {
       } # if
       
       if(input$typeTraitement == "raster" & currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_flagRaster[2] == 1){
+        
+        jpeg(file = paste0("realign_",input$selectRealign,".jpg"))
+        ylim <- c(min(unlist(lapply(1:length(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_Files), function(i){currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataIntermRaster[[i]][,input$elemRaster]})), na.rm = T),max(unlist(lapply(1:length(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_Files), function(i){currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataIntermRaster[[i]][,input$elemRaster]})), na.rm = T))
+        
+        xlim <- c(min(unlist(lapply(1:length(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_Files), function(i){currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataIntermRaster[[i]][,1]}))),max(unlist(lapply(1:length(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_Files), function(i){currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataIntermRaster[[i]][,1]})), na.rm = T))
+        
+        lapply(1:length(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_Files), function(x){
+          
+          plot(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataIntermRaster[[x]][,1],currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataIntermRaster[[x]][,input$elemRaster] , xlim = xlim, ylim = ylim, xlab = "Time (s)", ylab = "Concentrations", type = "b", col = rainbow(length(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_Files))[x])
+          
+          par(new = T)
+          
+        })
+        
+        plot(currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataFinaleCorrel[,1],currentProject()$samples[[grep(input$selectRealign,currentProject()$samplesFiles)]]$rep_dataFinaleCorrel[,input$elemRaster], xlim = xlim, ylim = ylim, xlab = "", ylab = "", type = "b")
+        
+        dev.off()
         
         output$textRealign2 <- renderUI({
           

@@ -533,7 +533,6 @@ elementR_project <- R6Class("elementR_project",
                                   X[i] <- self$sessionSummary[which(self$sessionSummary[,1] == temp[i]),2] 
                                   
                                 }
-                                
                                 if(length(self$calibrationsFiles) == 1){
                                   
                                   for(j in 1:(Nbelem)){
@@ -551,7 +550,6 @@ elementR_project <- R6Class("elementR_project",
                                 }
                                 if(length(self$calibrationsFiles) == 2){                                
                                   
-                                  
                                   for(j in 1:(Nbelem)){
                                     Y <- self$SummaryNist[1:length(self$calibrationsFiles),j]  
                                     
@@ -566,35 +564,59 @@ elementR_project <- R6Class("elementR_project",
                                   
                                 }
                                 if(length(self$calibrationsFiles) > 2){
+                                  
+                                  
                                   for(j in 1:(Nbelem)){
                                     
-                                    Y <- self$SummaryNist[1:length(self$calibrationsFiles),j]    
+                                    Y <- self$SummaryNist[1:length(self$calibrationsFiles),j]  
                                     
-                                    model <- lm(Y~X)
-                                    self$regressionModel[[j]] <- model
-                                    
-                                    # tests 
-                                    model.res <- model$res
-                                    
-                                    res_test <- vector()
-                                    
+                                    tempNum <- which(sapply(1:length(Y), function(x){
+                                      
+                                      if(is.finite(Y[x])){T}
+                                      else{F}
+                                    }) == T)
+                                                                        
                                     if(length(which(Y != 1)) == 0){res_test <- NA}
                                     else{
-                                      
-                                      res_test[1] <- shapiro.test(model.res)$p.value
-                                      
-                                      if(length(self$calibrationsFiles) == 3){
-                                        res_test[2] <- NA
+                                      if(length(tempNum) < 3){
+                                        
+                                        toDo <- which(is.finite(tempNum))
+                                        
+                                        y <- Y[toDo]
+                                        x <- X[toDo]
+
+                                        slope <- (y[2] - y[1])/(x[2] - x[1])
+
+                                        intercept <- y[1] - slope*x[1]
+
+                                        tableau[j,5:6] <- c(intercept , slope)                                        
+# 
+#                                         self$regressionModel[[j]] <- c(intercept , slope)
+                                        
                                       }
                                       else{
-                                        res_test[2] <- hmctest(model)$p.value
+                                        model <- lm(Y~X)
+                                        
+                                        self$regressionModel[[j]] <- model
+                                        
+                                        # tests 
+                                        model.res <- model$res
+                                        
+                                        res_test <- vector()
+
+                                        res_test[1] <- shapiro.test(model.res)$p.value
+
+                                        if(length(tempNum) == 3){res_test[2] <-NA}
+                                        else{ res_test[2] <- hmctest(model)$p.value}
+                                       
+                                        res_test[3] <- dwtest(model)$p.value
+                                        res_test[4] <- summary(model)$coefficients[2,4]                                      
+                                        res_test[5:6] <- summary(model)$coefficients[,1]
                                       }
                                       
-                                      res_test[3] <- dwtest(model)$p.value
-                                      res_test[4] <- summary(model)$coefficients[2,4]
-                                      res_test[5:6] <- summary(model)$coefficients[,1]
+
                                     }
-                                    
+#                                     
                                     tableau[j,] <- res_test
                                   }  
                                   
