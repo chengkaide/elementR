@@ -154,7 +154,10 @@ body <- dashboardBody(
     tabItem("Etalon",
             uiOutput("Text1"),
             uiOutput("Text2"),
-            uiOutput("Text2Bis"),
+            uiOutput("Text2_3"),
+            uiOutput("Text2_0"),
+            uiOutput("Text2_1"),
+            uiOutput("Text2_2"),
             br(),            
             fluidRow(
               uiOutput("Text3")
@@ -1088,6 +1091,8 @@ server <- function(input, output, session) {
   correction <- reactiveValues(val = NULL)
   tableauStat <- reactiveValues(temp = NULL)
   
+  NomNist <- reactiveValues(temp = NULL)
+  
   observe({
     input$saveNists
     input$DeleteNists
@@ -1119,21 +1124,29 @@ server <- function(input, output, session) {
             )
           })#output$Text1
           
-          NomNist <- reactiveValues(temp = geneR(choix = letterChoice, longueurDesirer = 5, combinaisonDesirer = length(currentProject()$listeElem)))
+          NomNist$temp <- geneR(choix = letterChoice, longueurDesirer = 5, combinaisonDesirer = length(currentProject()$listeElem))
           correction$val <- rep(F, length(currentProject()$listeElem))
           preview <- reactiveValues(temp = geneR(choix = letterChoice, longueurDesirer = 6, combinaisonDesirer = length(currentProject()$listeElem)))
           previewAction <- reactiveValues(temp = rep(0, length(currentProject()$listeElem)))
           
           observe({
-            if(length(currentProject()$flag_Calib) == 1){
-              
+            if((validCorrection$temp%%2) == 0){
               output$Text2 <- renderUI({
                 box(width = 12,background = NULL, height = 100, 
                     fluidRow(
                       column(1,
                              h4("Element")),
-                      column(6,
-                             h4("Regression parameters")),
+                      column(1,
+                             h4("Norm.")),
+                      column(1,
+                             h4("Homosc.")),
+                      column(1,
+                             h4("Independance")),
+                      column(1,
+                             h4("Regression")),
+                      column(1,
+                             checkboxInput("CorrectAll",label = "Correct all", value = F)
+                      ),
                       column(1,
                              actionButton("validDrift", "Valider")
                       )
@@ -1142,113 +1155,317 @@ server <- function(input, output, session) {
                 )
                 
               })
-              
             }
-            if(length(currentProject()$flag_Calib) == 2){
-              
-              if((validCorrection$temp%%2) == 0){
-                output$Text2 <- renderUI({
-                  box(width = 12,background = NULL, height = 100, 
-                      fluidRow(
-                        column(1,
-                               h4("Element")),
-                        column(6,
-                               h4("Regression parameters")),
-                        column(1,
-                               checkboxInput("CorrectAll",label = "Correct all", value = F)),
-                        column(1,
-                               actionButton("validDrift", "Valider")
-                        )
-                        
+            if((validCorrection$temp%%2) == 1){
+              output$Text2 <- renderUI({
+                box(width = 12,background = NULL, height = 100, 
+                    fluidRow(
+                      column(1,
+                             h4("Element")),
+                      column(1,
+                             h4("Norm.")),
+                      column(1,
+                             h4("Homosc.")),
+                      column(1,
+                             h4("Independance")),
+                      column(1,
+                             h4("Regression")),
+                      column(1
+                      ),
+                      column(1,
+                             actionButton("validDrift", "Delete")
                       )
-                  )
-                  
-                })
-              }
-              if((validCorrection$temp%%2) == 1){
-                output$Text2 <- renderUI({
-                  box(width = 12,background = NULL, height = 100, 
-                      fluidRow(
-                        column(1,
-                               h4("Element")),
-                        column(6,
-                               h4("Regression parameters")),
-                        column(1,
-                               actionButton("validDrift", "Delete")
-                        )
-                        
-                      )
-                  )
-                  
-                })
-              }
-              
-            }
-            if(length(currentProject()$flag_Calib) > 2){
-              if((validCorrection$temp%%2) == 0){
-                output$Text2 <- renderUI({
-                  box(width = 12,background = NULL, height = 100, 
-                      fluidRow(
-                        column(1,
-                               h4("Element")),
-                        column(1,
-                               h4("Norm.")),
-                        column(1,
-                               h4("Homosc.")),
-                        column(1,
-                               h4("Independance")),
-                        column(1,
-                               h4("Regression")),
-                        column(1,
-                               checkboxInput("CorrectAll",label = "Correct all", value = F)
-                        ),
-                        column(1,
-                               actionButton("validDrift", "Valider")
-                        )
-                        
-                      )
-                  )
-                  
-                })
-              }
-              if((validCorrection$temp%%2) == 1){
-                output$Text2 <- renderUI({
-                  box(width = 12,background = NULL, height = 100, 
-                      fluidRow(
-                        column(1,
-                               h4("Element")),
-                        column(1,
-                               h4("Norm.")),
-                        column(1,
-                               h4("Homosc.")),
-                        column(1,
-                               h4("Independance")),
-                        column(1,
-                               h4("Regression")),
-                        column(1
-                        ),
-                        column(1,
-                               actionButton("validDrift", "Delete")
-                        )
-                        
-                      )
-                  )
-                  
-                })
-              }
-              
+                      
+                    )
+                )
+                
+              })
             }
           })          
           
           observe({
             if(is.null(input$CorrectAll)){
               
-              if(length(currentProject()$flag_Calib) == 1){
+            }
+            else{
                 
+                zero <- which(currentProject()$nbCalib == 0)
+                one <- which(currentProject()$nbCalib == 1)
+                two <- which(currentProject()$nbCalib == 2)
+                three <- which(currentProject()$nbCalib > 2)
                 
-                output$Text2Bis <- renderUI({
-                  
-                  lapply(1:length(currentProject()$listeElem), function(x){
+                output$Text2_3 <- renderUI({
+                    
+                    lapply(three, function(x){                      
+
+                      plotname <- paste("plot", x, sep="")                  
+                      
+                      output[[plotname]] <- renderPlot({
+                        par(mfrow = c(1,4))
+                        plot(currentProject()$regressionModel[[x]])
+                      })
+                      
+                      plotname2 <- paste("plotSession", x, sep="")
+                      
+                      output[[plotname2]] <- renderPlot({
+                        
+                        min <- (max(tab$dat[1:length(currentProject()$flag_Calib),x], na.rm = T) - max(tab$dat[(length(currentProject()$flag_Calib)+1):(2*length(currentProject()$flag_Calib)),x], na.rm = T))*0.5
+                        
+                        max <- (max(tab$dat[1:length(currentProject()$flag_Calib),x], na.rm = T) + max(tab$dat[(length(currentProject()$flag_Calib)+1):(2*length(currentProject()$flag_Calib)),x], na.rm = T))*1.5
+                        
+                        PlotIC(currentProject()$calibrationsFiles,tab$dat[1:length(currentProject()$flag_Calib),x],tab$dat[(length(currentProject()$flag_Calib)+1):(2*length(currentProject()$flag_Calib)),x],lengthSeg = 0.1, xlim =c(1,length(currentProject()$flag_Calib)),ylim=c(min, max), ylab = "cps", xlab = "Calibration files")
+                        
+                        abline(a = currentProject()$regressionModel[[x]]$coefficients[1], b= currentProject()$regressionModel[[x]]$coefficients[2], col ="red", lty = 2)
+                      })
+                      
+                      if(!is.finite(tableauStat$temp[x, 4])){
+                        box(width = 12,background = NULL, height = 100,
+                            column(8,
+                                   fluidRow(
+                                     column(1,
+                                            h4(currentProject()$listeElem[x], style = couleur[1])),
+                                     column(1,
+                                            h4(round(tableauStat$temp[x,1],2), style = couleur[1])),
+                                     column(1,
+                                            h4(round(tableauStat$temp[x,2],2), style = couleur[1])),
+                                     column(1,
+                                            h4(round(tableauStat$temp[x,3],2), style = couleur[1])),
+                                     column(1,
+                                            h4(round(tableauStat$temp[x,4],2)), style = couleur[2]),
+                                     column(3,
+                                            actionButton(preview$temp[x],"Regression settings preview"))
+                                   )
+                            )
+                            
+                        )
+                      }
+                      else {
+                        if((validCorrection$temp%%2) == 0){
+                          if((previewAction$temp[x]%%2) ==1){
+                            if(tableauStat$temp[x,4] < 0.05){   
+                              box(width = 12,background = NULL, height = currentProject()$setParam(tableauStat$temp[x,1:4], previewAction$temp[x], input$CorrectAll)[1],
+                                  column(8,
+                                         fluidRow(
+                                           column(1,
+                                                  h4(currentProject()$listeElem[x], style = currentProject()$setParam(tableauStat$temp[x,1:4], previewAction$temp[x], input$CorrectAll)[5])),
+                                           column(1,
+                                                  h4(round(tableauStat$temp[x,1],2), style = currentProject()$setParam(tableauStat$temp[x,1:4], previewAction$temp[x], input$CorrectAll)[2])),
+                                           column(1,
+                                                  h4(round(tableauStat$temp[x,2],2), style = currentProject()$setParam(tableauStat$temp[x,1:4], previewAction$temp[x], input$CorrectAll)[3])),
+                                           column(1,
+                                                  h4(round(tableauStat$temp[x,3],2), style = currentProject()$setParam(tableauStat$temp[x,1:4], previewAction$temp[x], input$CorrectAll)[4])),
+                                           column(1,
+                                                  h4(round(tableauStat$temp[x,4],2)), style = currentProject()$setParam(tableauStat$temp[x,1:4], previewAction$temp[x], input$CorrectAll)[5]),
+                                           column(3,
+                                                  actionButton(preview$temp[x],"Regression settings preview")),
+                                           column(1, 
+                                                  checkboxInput(NomNist$temp[x],label = "Correct", value = eval(parse(text = currentProject()$setParam(tableauStat$temp[x,1:4], previewAction$temp[x], input$CorrectAll)[6]))))
+                                         ),
+                                         plotOutput(plotname)  
+                                  ),
+                                  column(4, align = "center",
+                                         plotOutput(plotname2),
+                                         h4(paste0("regression: Y = ", round(currentProject()$regressionModel[[x]]$coefficients[1],3), " + X * ", round(currentProject()$regressionModel[[x]]$coefficients[2],3)))
+                                  )
+                                  
+                              )
+                            }
+                            else{
+                              box(width = 12,background = NULL, height = currentProject()$setParam(tableauStat$temp[x,1:4], previewAction$temp[x], input$CorrectAll)[1],
+                                  column(8,
+                                         fluidRow(
+                                           column(1,
+                                                  h4(currentProject()$listeElem[x], style = currentProject()$setParam(tableauStat$temp[x,1:4], previewAction$temp[x], input$CorrectAll)[5])),
+                                           column(1,
+                                                  h4(round(tableauStat$temp[x,1],2), style = currentProject()$setParam(tableauStat$temp[x,1:4], previewAction$temp[x], input$CorrectAll)[2])),
+                                           column(1,
+                                                  h4(round(tableauStat$temp[x,2],2), style = currentProject()$setParam(tableauStat$temp[x,1:4], previewAction$temp[x], input$CorrectAll)[3])),
+                                           column(1,
+                                                  h4(round(tableauStat$temp[x,3],2), style = currentProject()$setParam(tableauStat$temp[x,1:4], previewAction$temp[x], input$CorrectAll)[4])),
+                                           column(1,
+                                                  h4(round(tableauStat$temp[x,4],2)), style = currentProject()$setParam(tableauStat$temp[x,1:4], previewAction$temp[x], input$CorrectAll)[5]),
+                                           column(3,
+                                                  actionButton(preview$temp[x],"Regression settings preview"))
+                                         ),
+                                         plotOutput(plotname)  
+                                  ),
+                                  column(4, align = "center",
+                                         plotOutput(plotname2),
+                                         h4(paste0("regression: Y = ", round(currentProject()$regressionModel[[x]]$coefficients[1],3), " + X * ", round(currentProject()$regressionModel[[x]]$coefficients[2],3)))
+                                  )
+                                  
+                              )
+                            }                            
+                          }
+                          else{
+                            if(tableauStat$temp[x,4] < 0.05){
+                              box(width = 12,background = NULL, height = currentProject()$setParam(tableauStat$temp[x,1:4], previewAction$temp[x], input$CorrectAll)[1],
+                                  column(8,
+                                         fluidRow(
+                                           column(1,
+                                                  h4(currentProject()$listeElem[x], style = currentProject()$setParam(tableauStat$temp[x,1:4], previewAction$temp[x], input$CorrectAll)[5])),
+                                           column(1,
+                                                  h4(round(tableauStat$temp[x,1],2), style = currentProject()$setParam(tableauStat$temp[x,1:4], previewAction$temp[x], input$CorrectAll)[2])),
+                                           column(1,
+                                                  h4(round(tableauStat$temp[x,2],2), style = currentProject()$setParam(tableauStat$temp[x,1:4], previewAction$temp[x], input$CorrectAll)[3])),
+                                           column(1,
+                                                  h4(round(tableauStat$temp[x,3],2), style = currentProject()$setParam(tableauStat$temp[x,1:4], previewAction$temp[x], input$CorrectAll)[4])),
+                                           column(1,
+                                                  h4(round(tableauStat$temp[x,4],2)), style = currentProject()$setParam(tableauStat$temp[x,1:4], previewAction$temp[x], input$CorrectAll)[5]),
+                                           column(3,
+                                                  actionButton(preview$temp[x],"Regression settings preview")),
+                                           column(1, 
+                                                  checkboxInput(NomNist$temp[x],label = "Correct", value = eval(parse(text = currentProject()$setParam(tableauStat$temp[x,1:4], previewAction$temp[x], input$CorrectAll)[6]))))
+                                         ) 
+                                  )
+                                  
+                              )
+                            }
+                            else{
+                              box(width = 12,background = NULL, height = currentProject()$setParam(tableauStat$temp[x,1:4], previewAction$temp[x], input$CorrectAll)[1],
+                                  column(8,
+                                         fluidRow(
+                                           column(1,
+                                                  h4(currentProject()$listeElem[x], style = currentProject()$setParam(tableauStat$temp[x,1:4], previewAction$temp[x], input$CorrectAll)[5])),
+                                           column(1,
+                                                  h4(round(tableauStat$temp[x,1],2), style = currentProject()$setParam(tableauStat$temp[x,1:4], previewAction$temp[x], input$CorrectAll)[2])),
+                                           column(1,
+                                                  h4(round(tableauStat$temp[x,2],2), style = currentProject()$setParam(tableauStat$temp[x,1:4], previewAction$temp[x], input$CorrectAll)[3])),
+                                           column(1,
+                                                  h4(round(tableauStat$temp[x,3],2), style = currentProject()$setParam(tableauStat$temp[x,1:4], previewAction$temp[x], input$CorrectAll)[4])),
+                                           column(1,
+                                                  h4(round(tableauStat$temp[x,4],2)), style = currentProject()$setParam(tableauStat$temp[x,1:4], previewAction$temp[x], input$CorrectAll)[5]),
+                                           column(3,
+                                                  actionButton(preview$temp[x],"Regression settings preview"))
+                                         ) 
+                                  )
+                                  
+                              )
+                            }   
+                          }
+                        }
+                        else{
+                          if((previewAction$temp[x]%%2) ==1){
+                            if(tableauStat$temp[x,4] < 0.05){   
+                              box(width = 12,background = NULL, height = currentProject()$setParam(tableauStat$temp[x,1:4], previewAction$temp[x], input$CorrectAll)[1],
+                                  column(8,
+                                         fluidRow(
+                                           column(1,
+                                                  h4(currentProject()$listeElem[x], style = currentProject()$setParam(tableauStat$temp[x,1:4], previewAction$temp[x], input$CorrectAll)[5])),
+                                           column(1,
+                                                  h4(round(tableauStat$temp[x,1],2), style = currentProject()$setParam(tableauStat$temp[x,1:4], previewAction$temp[x], input$CorrectAll)[2])),
+                                           column(1,
+                                                  h4(round(tableauStat$temp[x,2],2), style = currentProject()$setParam(tableauStat$temp[x,1:4], previewAction$temp[x], input$CorrectAll)[3])),
+                                           column(1,
+                                                  h4(round(tableauStat$temp[x,3],2), style = currentProject()$setParam(tableauStat$temp[x,1:4], previewAction$temp[x], input$CorrectAll)[4])),
+                                           column(1,
+                                                  h4(round(tableauStat$temp[x,4],2)), style = currentProject()$setParam(tableauStat$temp[x,1:4], previewAction$temp[x], input$CorrectAll)[5]),
+                                           column(3,
+                                                  actionButton(preview$temp[x],"Regression settings preview"))),
+                                         plotOutput(plotname)  
+                                  ),
+                                  column(4, align = "center",
+                                         plotOutput(plotname2),
+                                         h4(paste0("regression: Y = ", round(currentProject()$regressionModel[[x]]$coefficients[1],3), " + X * ", round(currentProject()$regressionModel[[x]]$coefficients[2],3)))
+                                  )
+                                  
+                              )
+                            }
+                            else{
+                              box(width = 12,background = NULL, height = currentProject()$setParam(tableauStat$temp[x,1:4], previewAction$temp[x], input$CorrectAll)[1],
+                                  column(8,
+                                         fluidRow(
+                                           column(1,
+                                                  h4(currentProject()$listeElem[x], style = currentProject()$setParam(tableauStat$temp[x,1:4], previewAction$temp[x], input$CorrectAll)[5])),
+                                           column(1,
+                                                  h4(round(tableauStat$temp[x,1],2), style = currentProject()$setParam(tableauStat$temp[x,1:4], previewAction$temp[x], input$CorrectAll)[2])),
+                                           column(1,
+                                                  h4(round(tableauStat$temp[x,2],2), style = currentProject()$setParam(tableauStat$temp[x,1:4], previewAction$temp[x], input$CorrectAll)[3])),
+                                           column(1,
+                                                  h4(round(tableauStat$temp[x,3],2), style = currentProject()$setParam(tableauStat$temp[x,1:4], previewAction$temp[x], input$CorrectAll)[4])),
+                                           column(1,
+                                                  h4(round(tableauStat$temp[x,4],2)), style = currentProject()$setParam(tableauStat$temp[x,1:4], previewAction$temp[x], input$CorrectAll)[5]),
+                                           column(3,
+                                                  actionButton(preview$temp[x],"Regression settings preview"))
+                                         ),
+                                         plotOutput(plotname)  
+                                  ),
+                                  column(4, align = "center",
+                                         plotOutput(plotname2),
+                                         h4(paste0("regression: Y = ", round(currentProject()$regressionModel[[x]]$coefficients[1],3), " + X * ", round(currentProject()$regressionModel[[x]]$coefficients[2],3)))
+                                  )
+                                  
+                              )
+                            }                            
+                          }
+                          else{
+                            if(tableauStat$temp[x,4] < 0.05){
+                              box(width = 12,background = NULL, height = currentProject()$setParam(tableauStat$temp[x,1:4], previewAction$temp[x], input$CorrectAll)[1],
+                                  column(8,
+                                         fluidRow(
+                                           column(1,
+                                                  h4(currentProject()$listeElem[x], style = currentProject()$setParam(tableauStat$temp[x,1:4], previewAction$temp[x], input$CorrectAll)[5])),
+                                           column(1,
+                                                  h4(round(tableauStat$temp[x,1],2), style = currentProject()$setParam(tableauStat$temp[x,1:4], previewAction$temp[x], input$CorrectAll)[2])),
+                                           column(1,
+                                                  h4(round(tableauStat$temp[x,2],2), style = currentProject()$setParam(tableauStat$temp[x,1:4], previewAction$temp[x], input$CorrectAll)[3])),
+                                           column(1,
+                                                  h4(round(tableauStat$temp[x,3],2), style = currentProject()$setParam(tableauStat$temp[x,1:4], previewAction$temp[x], input$CorrectAll)[4])),
+                                           column(1,
+                                                  h4(round(tableauStat$temp[x,4],2)), style = currentProject()$setParam(tableauStat$temp[x,1:4], previewAction$temp[x], input$CorrectAll)[5]),
+                                           column(3,
+                                                  actionButton(preview$temp[x],"Regression settings preview"))
+                                         ) 
+                                  )
+                                  
+                              )
+                            }
+                            else{
+                              box(width = 12,background = NULL, height = currentProject()$setParam(tableauStat$temp[x,1:4], previewAction$temp[x], input$CorrectAll)[1],
+                                  column(8,
+                                         fluidRow(
+                                           column(1,
+                                                  h4(currentProject()$listeElem[x], style = currentProject()$setParam(tableauStat$temp[x,1:4], previewAction$temp[x], input$CorrectAll)[5])),
+                                           column(1,
+                                                  h4(round(tableauStat$temp[x,1],2), style = currentProject()$setParam(tableauStat$temp[x,1:4], previewAction$temp[x], input$CorrectAll)[2])),
+                                           column(1,
+                                                  h4(round(tableauStat$temp[x,2],2), style = currentProject()$setParam(tableauStat$temp[x,1:4], previewAction$temp[x], input$CorrectAll)[3])),
+                                           column(1,
+                                                  h4(round(tableauStat$temp[x,3],2), style = currentProject()$setParam(tableauStat$temp[x,1:4], previewAction$temp[x], input$CorrectAll)[4])),
+                                           column(1,
+                                                  h4(round(tableauStat$temp[x,4],2)), style = currentProject()$setParam(tableauStat$temp[x,1:4], previewAction$temp[x], input$CorrectAll)[5]),
+                                           column(3,
+                                                  actionButton(preview$temp[x],"Regression settings preview"))
+                                         ) 
+                                  )
+                                  
+                              )
+                            }   
+                          }
+                        }
+                      }
+                    
+                  }) # eo lapply
+                })
+                
+                output$Text2_0 <- renderUI({
+                  lapply(zero, function(x){
+                    box(width = 12,background = NULL, height = 100,
+                        column(8,
+                               fluidRow(
+                                 column(1,
+                                        h4(currentProject()$listeElem[x], style = couleur[1])),
+                                 column(6,
+                                        h4("No calibration value for this element"))
+                               )
+                        )
+                        
+                    )
+                  })# eo lapply
+                })
+                
+                output$Text2_1 <- renderUI({
+                  lapply(one, function(x){
                     
                     plotname2 <- paste("plotSession", x, sep="")
                     
@@ -1302,35 +1519,24 @@ server <- function(input, output, session) {
                     
                     
                   })
-                  
-                })                  
+                })
                 
-                
-              }
-              else{}
-              
-            }
-            else{                 
-              if(length(currentProject()$flag_Calib) == 2){
-                
-                if((validCorrection$temp%%2) == 0){
-                  output$Text2Bis <- renderUI({
+                output$Text2_2 <- renderUI({
+                  lapply(two, function(x){
                     
-                    lapply(1:length(currentProject()$listeElem), function(x){
+                    plotname2 <- paste("plotSession", x, sep="")
+                    
+                    output[[plotname2]] <- renderPlot({
                       
-                      plotname2 <- paste("plotSession", x, sep="")
+                      min <- (max(tab$dat[1:length(currentProject()$flag_Calib),x], na.rm = T) - max(tab$dat[(length(currentProject()$flag_Calib)+1):(2*length(currentProject()$flag_Calib)),x],na.rm = T))*0.5
                       
-                      output[[plotname2]] <- renderPlot({
-                        
-                        min <- (max(tab$dat[1:length(currentProject()$flag_Calib),x], na.rm = T) - max(tab$dat[(length(currentProject()$flag_Calib)+1):(2*length(currentProject()$flag_Calib)),x],na.rm = T))*0.5
-                        
-                        max <- (max(tab$dat[1:length(currentProject()$flag_Calib),x],na.rm = T) + max(tab$dat[(length(currentProject()$flag_Calib)+1):(2*length(currentProject()$flag_Calib)),x],na.rm = T))*1.5
-                        
-                        PlotIC(currentProject()$calibrationsFiles,tab$dat[1:length(currentProject()$flag_Calib),x],tab$dat[(length(currentProject()$flag_Calib)+1):(2*length(currentProject()$flag_Calib)),x],lengthSeg = 0.1, xlim =c(1,length(currentProject()$flag_Calib)),ylim=c(min, max), ylab = "cps", xlab = currentProject()$calibrationsFiles)
-                        
-                        abline(a = currentProject()$regressionModel[[x]][1], b= currentProject()$regressionModel[[x]][2], col ="red", lty = 2)
-                      })   
+                      max <- (max(tab$dat[1:length(currentProject()$flag_Calib),x],na.rm = T) + max(tab$dat[(length(currentProject()$flag_Calib)+1):(2*length(currentProject()$flag_Calib)),x],na.rm = T))*1.5
                       
+                      PlotIC(currentProject()$calibrationsFiles,tab$dat[1:length(currentProject()$flag_Calib),x],tab$dat[(length(currentProject()$flag_Calib)+1):(2*length(currentProject()$flag_Calib)),x],lengthSeg = 0.1, xlim =c(1,length(currentProject()$flag_Calib)),ylim=c(min, max), ylab = "cps", xlab = currentProject()$calibrationsFiles)
+                      
+                      abline(a = currentProject()$regressionModel[[x]][1], b= currentProject()$regressionModel[[x]][2], col ="red", lty = 2)
+                    })   
+                    if((validCorrection$temp%%2) == 0){
                       if(input$CorrectAll == T){
                         if((previewAction$temp[x]%%2) ==1){
                           taille <- 500
@@ -1342,9 +1548,9 @@ server <- function(input, output, session) {
                                      fluidRow(
                                        column(1,
                                               h4(currentProject()$listeElem[x], style = couleur[1])),
-                                       column(4,
+                                       column(3,
                                               h4("No parameters: Only two calibration files", style = couleur[1])),
-                                       column(2,
+                                       column(3,
                                               h4(paste0("Regression: Y = ", round(currentProject()$regressionModel[[x]][1],3), " + X * ", round(currentProject()$regressionModel[[x]][2],3)))),
                                        column(3,
                                               actionButton(preview$temp[x],"Hide settings preview")),
@@ -1369,9 +1575,9 @@ server <- function(input, output, session) {
                                      fluidRow(
                                        column(1,
                                               h4(currentProject()$listeElem[x], style = couleur[1])),
-                                       column(4,
+                                       column(3,
                                               h4("No parameters: Only two calibration files", style = couleur[1])),
-                                       column(2,
+                                       column(3,
                                               h4(paste0("regression: Y = ", round(currentProject()$regressionModel[[x]][1],3), " + X * ", round(currentProject()$regressionModel[[x]][2],3)))),
                                        column(3,
                                               actionButton(preview$temp[x],"Regression settings preview")),
@@ -1394,9 +1600,9 @@ server <- function(input, output, session) {
                                      fluidRow(
                                        column(1,
                                               h4(currentProject()$listeElem[x], style = couleur[1])),
-                                       column(4,
+                                       column(3,
                                               h4("No parameters: Only two calibration files", style = couleur[1])),
-                                       column(2,
+                                       column(3,
                                               h4(paste0("regression: Y = ", round(currentProject()$regressionModel[[x]][1],3), " + X * ", round(currentProject()$regressionModel[[x]][2],3)))),
                                        column(3,
                                               actionButton(preview$temp[x],"Hide settings preview")),
@@ -1421,9 +1627,9 @@ server <- function(input, output, session) {
                                      fluidRow(
                                        column(1,
                                               h4(currentProject()$listeElem[x], style = couleur[1])),
-                                       column(4,
+                                       column(3,
                                               h4("No parameters: Only two calibration files", style = couleur[1])),
-                                       column(2,
+                                       column(3,
                                               h4(paste0("regression: Y = ", round(currentProject()$regressionModel[[x]][1],3), " + X * ", round(currentProject()$regressionModel[[x]][2],3)))),                                       
                                        column(3,
                                               actionButton(preview$temp[x],"Regression settings preview")),
@@ -1433,29 +1639,9 @@ server <- function(input, output, session) {
                               )                              
                           )                         
                         }
-                      }                    
-                      
-                    }) # eo lapply       
-                  }) # eo output$Text2Bis 
-                }
-                if((validCorrection$temp%%2) == 1){
-                  output$Text2Bis <- renderUI({
-                    
-                    lapply(1:length(currentProject()$listeElem), function(x){
-                      
-                      plotname2 <- paste("plotSession", x, sep="")
-                      
-                      output[[plotname2]] <- renderPlot({
-                        
-                        min <- (max(tab$dat[1:length(currentProject()$flag_Calib),x],na.rm = T) - max(tab$dat[(length(currentProject()$flag_Calib)+1):(2*length(currentProject()$flag_Calib)),x],na.rm = T))*0.5
-                        
-                        max <- (max(tab$dat[1:length(currentProject()$flag_Calib),x],na.rm = T) + max(tab$dat[(length(currentProject()$flag_Calib)+1):(2*length(currentProject()$flag_Calib)),x],na.rm = T))*1.5
-                        
-                        PlotIC(currentProject()$calibrationsFiles,tab$dat[1:length(currentProject()$flag_Calib),x],tab$dat[(length(currentProject()$flag_Calib)+1):(2*length(currentProject()$flag_Calib)),x],lengthSeg = 0.1, xlim =c(1,length(currentProject()$flag_Calib)),ylim=c(min, max),ylab = "cps", xlab = currentProject()$calibrationsFiles)
-                        
-                        abline(a = currentProject()$regressionModel[[x]][1], b= currentProject()$regressionModel[[x]][2], col ="red", lty = 2)
-                      })   
-                      
+                      }  
+                    }
+                    else{
                       if(input$CorrectAll == T){
                         if((previewAction$temp[x]%%2) ==1){
                           taille <- 500
@@ -1467,16 +1653,17 @@ server <- function(input, output, session) {
                                      fluidRow(
                                        column(1,
                                               h4(currentProject()$listeElem[x], style = couleur[1])),
-                                       column(4,
+                                       column(3,
                                               h4("No parameters: Only two calibration files", style = couleur[1])),
-                                       column(2,
-                                              h4(paste0("regression: Y = ", round(currentProject()$regressionModel[[x]][1],3), " + X * ", round(currentProject()$regressionModel[[x]][2],3)))),
+                                       column(3,
+                                              h4(paste0("Regression: Y = ", round(currentProject()$regressionModel[[x]][1],3), " + X * ", round(currentProject()$regressionModel[[x]][2],3)))),
                                        column(3,
                                               actionButton(preview$temp[x],"Hide settings preview"))
                                      ) 
                               ),
                               column(4,align = "center",
                                      plotOutput(plotname2)
+                                     
                               )
                               
                           )
@@ -1491,9 +1678,9 @@ server <- function(input, output, session) {
                                      fluidRow(
                                        column(1,
                                               h4(currentProject()$listeElem[x], style = couleur[1])),
-                                       column(4,
+                                       column(3,
                                               h4("No parameters: Only two calibration files", style = couleur[1])),
-                                       column(2,
+                                       column(3,
                                               h4(paste0("regression: Y = ", round(currentProject()$regressionModel[[x]][1],3), " + X * ", round(currentProject()$regressionModel[[x]][2],3)))),
                                        column(3,
                                               actionButton(preview$temp[x],"Regression settings preview"))
@@ -1514,9 +1701,9 @@ server <- function(input, output, session) {
                                      fluidRow(
                                        column(1,
                                               h4(currentProject()$listeElem[x], style = couleur[1])),
-                                       column(4,
+                                       column(3,
                                               h4("No parameters: Only two calibration files", style = couleur[1])),
-                                       column(2,
+                                       column(3,
                                               h4(paste0("regression: Y = ", round(currentProject()$regressionModel[[x]][1],3), " + X * ", round(currentProject()$regressionModel[[x]][2],3)))),
                                        column(3,
                                               actionButton(preview$temp[x],"Hide settings preview"))
@@ -1539,1066 +1726,25 @@ server <- function(input, output, session) {
                                      fluidRow(
                                        column(1,
                                               h4(currentProject()$listeElem[x], style = couleur[1])),
-                                       column(4,
+                                       column(3,
                                               h4("No parameters: Only two calibration files", style = couleur[1])),
-                                       column(2,
-                                              h4(paste0("regression: Y = ", round(currentProject()$regressionModel[[x]][1],3), " + X * ", round(currentProject()$regressionModel[[x]][2],3)))),
+                                       column(3,
+                                              h4(paste0("regression: Y = ", round(currentProject()$regressionModel[[x]][1],3), " + X * ", round(currentProject()$regressionModel[[x]][2],3)))),                                       
                                        column(3,
                                               actionButton(preview$temp[x],"Regression settings preview"))
                                      ) 
                               )                              
                           )                         
                         }
-                      }                    
-                      
-                    }) # eo lapply       
-                  }) # eo output$Text2Bis 
-                }
+                      }  
+                    }
+                  
+                    
+                  }) # eo lapply
+                })
                 
-              }
-              if(length(currentProject()$flag_Calib) > 2){
-                if((validCorrection$temp%%2) == 0){
-                  output$Text2Bis <- renderUI({
-                    
-                    lapply(1:length(currentProject()$listeElem), function(x){
-                      
-                      plotname <- paste("plot", x, sep="")                  
-                      
-                      output[[plotname]] <- renderPlot({
-                        par(mfrow = c(1,4))
-                        plot(currentProject()$regressionModel[[x]])
-                      })
-                      
-                      plotname2 <- paste("plotSession", x, sep="")
-                      
-                      output[[plotname2]] <- renderPlot({
-                        
-                        min <- (max(tab$dat[1:length(currentProject()$flag_Calib),x], na.rm = T) - max(tab$dat[(length(currentProject()$flag_Calib)+1):(2*length(currentProject()$flag_Calib)),x], na.rm = T))*0.5
-                        
-                        max <- (max(tab$dat[1:length(currentProject()$flag_Calib),x], na.rm = T) + max(tab$dat[(length(currentProject()$flag_Calib)+1):(2*length(currentProject()$flag_Calib)),x], na.rm = T))*1.5
-                        
-                        PlotIC(currentProject()$calibrationsFiles,tab$dat[1:length(currentProject()$flag_Calib),x],tab$dat[(length(currentProject()$flag_Calib)+1):(2*length(currentProject()$flag_Calib)),x],lengthSeg = 0.1, xlim =c(1,length(currentProject()$flag_Calib)),ylim=c(min, max), ylab = "cps", xlab = "Calibration files")
-                        
-                        abline(a = currentProject()$regressionModel[[x]]$coefficients[1], b= currentProject()$regressionModel[[x]]$coefficients[2], col ="red", lty = 2)
-                      })   
-                      
-                      if(is.na(tableauStat$temp[x,1]) | is.na(tableauStat$temp[x,2]) | is.na(tableauStat$temp[x,3]) | is.na(tableauStat$temp[x,4])){
-                        if(currentProject()$nbCalib[[j]] < 3 ){}
-                        if(currentProject()$nbCalib[[j]] > 3 ){}
-                        
-                      }
-                      else{         
-                        if(tableauStat$temp[x,1] < 0.05 | tableauStat$temp[x,2] <0.05 | tableauStat$temp[x,3] < 0.05){
-                          if(tableauStat$temp[x,4] < 0.05){
-                            if(input$CorrectAll == T){
-                              if((previewAction$temp[x]%%2) ==1){
-                                taille <- 500
-                                correction$val[x] <- T
-                                couleur <- c("color:red","color:red")
-                                
-                                box(width = 12,background = NULL, height = taille,
-                                    column(8,
-                                           fluidRow(
-                                             column(1,
-                                                    h4(currentProject()$listeElem[x], style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,1],2), style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,2],2), style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,3],2), style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,4],2)), style = couleur[2]),
-                                             column(3,
-                                                    actionButton(preview$temp[x],"Regression settings preview")),
-                                             column(1, 
-                                                    checkboxInput(NomNist$temp[x],label = "Correct", value = correction$val[x]))
-                                           ),
-                                           plotOutput(plotname)  
-                                    ),
-                                    column(4,align = "center",
-                                           plotOutput(plotname2),
-                                           h4(paste0("regression: Y = ", round(currentProject()$regressionModel[[x]]$coefficients[1],3), " + X * ", round(currentProject()$regressionModel[[x]]$coefficients[2],3)))
-                                    )
-                                    
-                                )
-                              }
-                              else{
-                                taille <- 100
-                                correction$val[x] <- T
-                                couleur <- c("color:red","color:red")
-                                
-                                box(width = 12,background = NULL, height = taille,
-                                    column(8,
-                                           fluidRow(
-                                             column(1,
-                                                    h4(currentProject()$listeElem[x], style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,1],2), style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,2],2), style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,3],2), style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,4],2)), style = couleur[2]),
-                                             column(3,
-                                                    actionButton(preview$temp[x],"Regression settings preview")),
-                                             column(1, 
-                                                    checkboxInput(NomNist$temp[x],label = "Correct", value = correction$val[x]))
-                                           ) 
-                                    )
-                                    
-                                )
-                                
-                              }
-                            }
-                            else{
-                              if((previewAction$temp[x]%%2) ==1 ){
-                                taille <- 500
-                                correction$val[x] <- F
-                                couleur <- c("color:red","color:red")
-                                
-                                box(width = 12,background = NULL, height = taille,
-                                    column(8,
-                                           fluidRow(
-                                             column(1,
-                                                    h4(currentProject()$listeElem[x], style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,1],2), style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,2],2), style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,3],2), style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,4],2)), style = couleur[2]),
-                                             column(3,
-                                                    actionButton(preview$temp[x],"Regression settings preview")),
-                                             column(1, 
-                                                    checkboxInput(NomNist$temp[x],label = "Correct", value = correction$val[x]))
-                                           ),
-                                           plotOutput(plotname)  
-                                    ),
-                                    column(4,align = "center",
-                                           plotOutput(plotname2),
-                                           h4(paste0("regression: Y = ", round(currentProject()$regressionModel[[x]]$coefficients[1],3), " + X * ", round(currentProject()$regressionModel[[x]]$coefficients[2],3)))
-                                    )
-                                )
-                              }
-                              else{
-                                taille <- 100
-                                correction$val[x] <- F
-                                couleur <- c("color:red","color:red")
-                                
-                                box(width = 12,background = NULL, height = taille,
-                                    column(8,
-                                           fluidRow(
-                                             column(1,
-                                                    h4(currentProject()$listeElem[x], style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,1],2), style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,2],2), style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,3],2), style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,4],2)), style = couleur[2]),
-                                             column(3,
-                                                    actionButton(preview$temp[x],"Regression settings preview")),
-                                             column(1, 
-                                                    checkboxInput(NomNist$temp[x],label = "Correct", value = correction$val[x]))
-                                           ) 
-                                    )
-                                    
-                                )
-                              }
-                            }
-                          }
-                          else{
-                            if(input$CorrectAll == T){
-                              if((previewAction$temp[x]%%2) ==1 ){
-                                taille <- 500
-                                correction$val[x] <- T
-                                couleur <- c("color:red","color:black")
-                                
-                                box(width = 12,background = NULL, height = taille,
-                                    column(8,
-                                           fluidRow(
-                                             column(1,
-                                                    h4(currentProject()$listeElem[x], style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,1],2), style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,2],2), style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,3],2), style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,4],2)), style = couleur[2]),
-                                             column(3,
-                                                    actionButton(preview$temp[x],"Regression settings preview"))
-                                           ),
-                                           plotOutput(plotname)  
-                                    ),
-                                    column(4,align = "center",
-                                           plotOutput(plotname2),
-                                           h4(paste0("regression: Y = ", round(currentProject()$regressionModel[[x]]$coefficients[1],3), " + X * ", round(currentProject()$regressionModel[[x]]$coefficients[2],3)))
-                                    )
-                                    
-                                )
-                              }
-                              else{
-                                taille <- 100
-                                correction$val[x] <- T
-                                couleur <- c("color:red","color:black")
-                                
-                                box(width = 12,background = NULL, height = taille,
-                                    column(8,
-                                           fluidRow(
-                                             column(1,
-                                                    h4(currentProject()$listeElem[x], style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,1],2), style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,2],2), style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,3],2), style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,4],2)), style = couleur[2]),
-                                             column(3,
-                                                    actionButton(preview$temp[x],"Regression settings preview"))
-                                           ) 
-                                    )
-                                    
-                                )
-                              }
-                            }
-                            else{
-                              if((previewAction$temp[x]%%2) ==1 ){
-                                taille <- 500
-                                correction$val[x] <- F
-                                couleur <- c("color:red","color:black")
-                                
-                                box(width = 12,background = NULL, height = taille,
-                                    column(8,
-                                           fluidRow(
-                                             column(1,
-                                                    h4(currentProject()$listeElem[x], style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,1],2), style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,2],2), style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,3],2), style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,4],2)), style = couleur[2]),
-                                             column(3,
-                                                    actionButton(preview$temp[x],"Regression settings preview"))
-                                           ),
-                                           plotOutput(plotname)  
-                                    ),
-                                    column(4,align = "center",
-                                           plotOutput(plotname2),
-                                           h4(paste0("regression: Y = ", round(currentProject()$regressionModel[[x]]$coefficients[1],3), " + X * ", round(currentProject()$regressionModel[[x]]$coefficients[2],3)))
-                                    )
-                                    
-                                )
-                              }
-                              else{
-                                taille <- 100
-                                correction$val[x] <- F
-                                couleur <- c("color:red","color:black")
-                                
-                                box(width = 12,background = NULL, height = taille,
-                                    column(8,
-                                           fluidRow(
-                                             column(1,
-                                                    h4(currentProject()$listeElem[x], style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,1],2), style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,2],2), style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,3],2), style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,4],2)), style = couleur[2]),
-                                             column(3,
-                                                    actionButton(preview$temp[x],"Regression settings preview"))
-                                           ) 
-                                    )
-                                    
-                                )
-                              }
-                            }
-                          }
-                        }
-                        else{
-                          if(tableauStat$temp[x,4] < 0.05){
-                            if(input$CorrectAll == T){
-                              if((previewAction$temp[x]%%2) ==1 ){
-                                taille <- 500
-                                correction$val[x] <- T
-                                couleur <- c("color:black","color:red")
-                                
-                                box(width = 12,background = NULL, height = taille,
-                                    column(8,
-                                           fluidRow(
-                                             column(1,
-                                                    h4(currentProject()$listeElem[x], style = couleur[2])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,1],2), style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,2],2), style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,3],2), style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,4],2)), style = couleur[2]),
-                                             column(3,
-                                                    actionButton(preview$temp[x],"Regression settings preview")),
-                                             column(1, 
-                                                    checkboxInput(NomNist$temp[x],label = "Correct", value = correction$val[x]))
-                                           ),
-                                           plotOutput(plotname)  
-                                    ),
-                                    column(4,align = "center",
-                                           plotOutput(plotname2),
-                                           h4(paste0("regression: Y = ", round(currentProject()$regressionModel[[x]]$coefficients[1],3), " + X * ", round(currentProject()$regressionModel[[x]]$coefficients[2],3)))
-                                    )
-                                    
-                                )
-                                
-                              }
-                              else{
-                                taille <- 100
-                                correction$val[x] <- T
-                                couleur <- c("color:black","color:red")
-                                
-                                box(width = 12,background = NULL, height = taille,
-                                    column(8,
-                                           fluidRow(
-                                             column(1,
-                                                    h4(currentProject()$listeElem[x], style = couleur[2])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,1],2), style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,2],2), style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,3],2), style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,4],2)), style = couleur[2]),
-                                             column(3,
-                                                    actionButton(preview$temp[x],"Regression settings preview")),
-                                             column(1, 
-                                                    checkboxInput(NomNist$temp[x],label = "Correct", value = correction$val[x]))
-                                           ) 
-                                    )
-                                    
-                                )
-                                
-                              }
-                            }
-                            else{
-                              if((previewAction$temp[x]%%2) ==1){
-                                taille <- 500
-                                correction$val[x] <- F
-                                couleur <- c("color:black","color:red")
-                                
-                                box(width = 12,background = NULL, height = taille,
-                                    column(8,
-                                           fluidRow(
-                                             column(1,
-                                                    h4(currentProject()$listeElem[x], style = couleur[2])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,1],2), style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,2],2), style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,3],2), style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,4],2)), style = couleur[2]),
-                                             column(3,
-                                                    actionButton(preview$temp[x],"Regression settings preview")),
-                                             column(1, 
-                                                    checkboxInput(NomNist$temp[x],label = "Correct", value = correction$val[x]))
-                                           ),
-                                           plotOutput(plotname)  
-                                    ),
-                                    column(4,align = "center",
-                                           plotOutput(plotname2),
-                                           h4(paste0("regression: Y = ", round(currentProject()$regressionModel[[x]]$coefficients[1],3), " + X * ", round(currentProject()$regressionModel[[x]]$coefficients[2],3)))
-                                    )
-                                    
-                                )
-                                
-                              }
-                              else{
-                                taille <- 100
-                                correction$val[x] <- F
-                                couleur <- c("color:black","color:red")
-                                
-                                box(width = 12,background = NULL, height = taille,
-                                    column(8,
-                                           fluidRow(
-                                             column(1,
-                                                    h4(currentProject()$listeElem[x], style = couleur[2])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,1],2), style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,2],2), style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,3],2), style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,4],2)), style = couleur[2]),
-                                             column(3,
-                                                    actionButton(preview$temp[x],"Regression settings preview")),
-                                             column(1, 
-                                                    checkboxInput(NomNist$temp[x],label = "Correct", value = correction$val[x]))
-                                           ) 
-                                    )
-                                    
-                                )
-                              }
-                            }
-                          }
-                          else{
-                            if(input$CorrectAll == T){
-                              if((previewAction$temp[x]%%2) ==1){
-                                taille <- 500
-                                correction$val[x] <- T
-                                couleur <- c("color:black","color:black")
-                                
-                                box(width = 12,background = NULL, height = taille,
-                                    column(8,
-                                           fluidRow(
-                                             column(1,
-                                                    h4(currentProject()$listeElem[x], style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,1],2), style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,2],2), style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,3],2), style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,4],2)), style = couleur[2]),
-                                             column(3,
-                                                    actionButton(preview$temp[x],"Regression settings preview"))
-                                           ),
-                                           plotOutput(plotname)  
-                                    ),
-                                    column(4, align = "center",
-                                           plotOutput(plotname2),
-                                           h4(paste0("regression: Y = ", round(currentProject()$regressionModel[[x]]$coefficients[1],3), " + X * ", round(currentProject()$regressionModel[[x]]$coefficients[2],3)))
-                                    )
-                                    
-                                )
-                              }
-                              else{
-                                taille <- 100
-                                correction$val[x] <- T
-                                couleur <- c("color:black","color:black")
-                                
-                                box(width = 12,background = NULL, height = taille,
-                                    column(8,
-                                           fluidRow(
-                                             column(1,
-                                                    h4(currentProject()$listeElem[x], style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,1],2), style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,2],2), style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,3],2), style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,4],2)), style = couleur[2]),
-                                             column(3,
-                                                    actionButton(preview$temp[x],"Regression settings preview"))
-                                           )
-                                    )
-                                    
-                                )
-                              }
-                            }
-                            else{
-                              if((previewAction$temp[x]%%2) ==1){  
-                                taille <- 500
-                                correction$val[x] <- F
-                                couleur <- c("color:black","color:black")
-                                
-                                box(width = 12,background = NULL, height = taille,
-                                    column(8,
-                                           fluidRow(
-                                             column(1,
-                                                    h4(currentProject()$listeElem[x], style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,1],2), style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,2],2), style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,3],2), style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,4],2)), style = couleur[2]),
-                                             column(3,
-                                                    actionButton(preview$temp[x],"Regression settings preview"))
-                                           ),
-                                           plotOutput(plotname)  
-                                    ),
-                                    column(4, align = "center",
-                                           plotOutput(plotname2),
-                                           h4(paste0("regression: Y = ", round(currentProject()$regressionModel[[x]]$coefficients[1],3), " + X * ", round(currentProject()$regressionModel[[x]]$coefficients[2],3)))
-                                    )
-                                    
-                                )
-                              }
-                              else{
-                                taille <- 100
-                                correction$val[x] <- F
-                                couleur <- c("color:black","color:black")
-                                
-                                box(width = 12,background = NULL, height = taille,
-                                    column(8,
-                                           fluidRow(
-                                             column(1,
-                                                    h4(currentProject()$listeElem[x], style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,1],2), style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,2],2), style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,3],2), style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,4],2)), style = couleur[2]),
-                                             column(3,
-                                                    actionButton(preview$temp[x],"Regression settings preview"))
-                                           )
-                                    )
-                                    
-                                )
-                              }
-                            }
-                          }
-                        }
-                        
-                      }
-                      
-                      
-                      
-                      
-                    }) # eo lapply       
-                  }) # eo output$Text2Bis 
-                }
-                if((validCorrection$temp%%2) == 1){
-                  output$Text2Bis <- renderUI({
-                    
-                    lapply(1:length(currentProject()$listeElem), function(x){
-                      
-                      plotname <- paste("plot", x, sep="")                  
-                      
-                      output[[plotname]] <- renderPlot({
-                        par(mfrow = c(1,4))
-                        plot(currentProject()$regressionModel[[x]])
-                      })
-                      
-                      plotname2 <- paste("plotSession", x, sep="")
-                      
-                      output[[plotname2]] <- renderPlot({
-                        
-                        min <- (max(tab$dat[1:length(currentProject()$flag_Calib),x], na.rm = T) - max(tab$dat[(length(currentProject()$flag_Calib)+1):(2*length(currentProject()$flag_Calib)),x], na.rm = T))*0.5
-                        
-                        max <- (max(tab$dat[1:length(currentProject()$flag_Calib),x], na.rm = T) + max(tab$dat[(length(currentProject()$flag_Calib)+1):(2*length(currentProject()$flag_Calib)),x], na.rm = T))*1.5
-                        
-                        PlotIC(currentProject()$calibrationsFiles,tab$dat[1:length(currentProject()$flag_Calib),x],tab$dat[(length(currentProject()$flag_Calib)+1):(2*length(currentProject()$flag_Calib)),x],lengthSeg = 0.1, xlim =c(1,length(currentProject()$flag_Calib)),ylim=c(min, max), ylab = "cps", xlab = "Calibration files")
-                        
-                        abline(a = currentProject()$regressionModel[[x]]$coefficients[1], b= currentProject()$regressionModel[[x]]$coefficients[2], col ="red", lty = 2)
-                      })  
-                      
-                      if(is.na(tableauStat$temp[x,1]) | is.na(tableauStat$temp[x,2]) | is.na(tableauStat$temp[x,3]) | is.na(tableauStat$temp[x,4])){
-                        taille <- 100
-                        couleur <- c("color:black","color:black")
-                        
-                        box(width = 12,background = NULL, height = taille,
-                            column(8,
-                                   fluidRow(
-                                     column(1,
-                                            h4(currentProject()$listeElem[x], style = couleur[1])),
-                                     column(1,
-                                            h4(round(tableauStat$temp[x,1],2), style = couleur[1])),
-                                     column(1,
-                                            h4(round(tableauStat$temp[x,2],2), style = couleur[1])),
-                                     column(1,
-                                            h4(round(tableauStat$temp[x,3],2), style = couleur[1])),
-                                     column(1,
-                                            h4(round(tableauStat$temp[x,4],2)), style = couleur[2]),
-                                     column(3,
-                                            actionButton(preview$temp[x],"Regression settings preview"))
-                                   )
-                            )
-                            
-                        )
-                        
-                      }
-                      else{         
-                        if(tableauStat$temp[x,1] < 0.05 | tableauStat$temp[x,2] <0.05 | tableauStat$temp[x,3] < 0.05){
-                          if(tableauStat$temp[x,4] < 0.05){
-                            if(input$CorrectAll == T){
-                              if((previewAction$temp[x]%%2) ==1){
-                                taille <- 500
-                                couleur <- c("color:red","color:red")
-                                
-                                box(width = 12,background = NULL, height = taille,
-                                    column(8,
-                                           fluidRow(
-                                             column(1,
-                                                    h4(currentProject()$listeElem[x], style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,1],2), style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,2],2), style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,3],2), style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,4],2)), style = couleur[2]),
-                                             column(3,
-                                                    actionButton(preview$temp[x],"Hide settings preview"))
-                                           ),
-                                           plotOutput(plotname)  
-                                    ),
-                                    column(4,align = "center",
-                                           plotOutput(plotname2),
-                                           h4(paste0("regression: Y = ", round(currentProject()$regressionModel[[x]]$coefficients[1],3), " + X * ", round(currentProject()$regressionModel[[x]]$coefficients[2],3)))
-                                    )
-                                    
-                                )
-                              }
-                              else{
-                                taille <- 100
-                                couleur <- c("color:red","color:red")
-                                
-                                box(width = 12,background = NULL, height = taille,
-                                    column(8,
-                                           fluidRow(
-                                             column(1,
-                                                    h4(currentProject()$listeElem[x], style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,1],2), style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,2],2), style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,3],2), style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,4],2)), style = couleur[2]),
-                                             column(3,
-                                                    actionButton(preview$temp[x],"Regression settings preview"))
-                                           ) 
-                                    )
-                                    
-                                )
-                                
-                              }
-                            }
-                            else{
-                              if((previewAction$temp[x]%%2) ==1 ){
-                                taille <- 500
-                                couleur <- c("color:red","color:red")
-                                
-                                box(width = 12,background = NULL, height = taille,
-                                    column(8,
-                                           fluidRow(
-                                             column(1,
-                                                    h4(currentProject()$listeElem[x], style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,1],2), style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,2],2), style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,3],2), style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,4],2)), style = couleur[2]),
-                                             column(3,
-                                                    actionButton(preview$temp[x],"Hide settings preview"))
-                                           ),
-                                           plotOutput(plotname)  
-                                    ),
-                                    column(4,align = "center",
-                                           plotOutput(plotname2),
-                                           h4(paste0("regression: Y = ", round(currentProject()$regressionModel[[x]]$coefficients[1],3), " + X * ", round(currentProject()$regressionModel[[x]]$coefficients[2],3)))
-                                    )
-                                )
-                              }
-                              else{
-                                taille <- 100
-                                couleur <- c("color:red","color:red")
-                                
-                                box(width = 12,background = NULL, height = taille,
-                                    column(8,
-                                           fluidRow(
-                                             column(1,
-                                                    h4(currentProject()$listeElem[x], style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,1],2), style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,2],2), style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,3],2), style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,4],2)), style = couleur[2]),
-                                             column(3,
-                                                    actionButton(preview$temp[x],"Regression settings preview"))
-                                           ) 
-                                    )
-                                    
-                                )
-                              }
-                            }
-                          }
-                          else{
-                            if(input$CorrectAll == T){
-                              if((previewAction$temp[x]%%2) ==1 ){
-                                taille <- 500
-                                couleur <- c("color:red","color:black")
-                                
-                                box(width = 12,background = NULL, height = taille,
-                                    column(8,
-                                           fluidRow(
-                                             column(1,
-                                                    h4(currentProject()$listeElem[x], style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,1],2), style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,2],2), style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,3],2), style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,4],2)), style = couleur[2]),
-                                             column(3,
-                                                    actionButton(preview$temp[x],"Hide settings preview"))
-                                           ),
-                                           plotOutput(plotname)  
-                                    ),
-                                    column(4,align = "center",
-                                           plotOutput(plotname2),
-                                           h4(paste0("regression: Y = ", round(currentProject()$regressionModel[[x]]$coefficients[1],3), " + X * ", round(currentProject()$regressionModel[[x]]$coefficients[2],3)))
-                                    )
-                                    
-                                )
-                              }
-                              else{
-                                taille <- 100
-                                couleur <- c("color:red","color:black")
-                                
-                                box(width = 12,background = NULL, height = taille,
-                                    column(8,
-                                           fluidRow(
-                                             column(1,
-                                                    h4(currentProject()$listeElem[x], style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,1],2), style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,2],2), style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,3],2), style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,4],2)), style = couleur[2]),
-                                             column(3,
-                                                    actionButton(preview$temp[x],"Regression settings preview"))
-                                           ) 
-                                    )
-                                    
-                                )
-                              }
-                            }
-                            else{
-                              if((previewAction$temp[x]%%2) ==1 ){
-                                taille <- 500
-                                couleur <- c("color:red","color:black")
-                                
-                                box(width = 12,background = NULL, height = taille,
-                                    column(8,
-                                           fluidRow(
-                                             column(1,
-                                                    h4(currentProject()$listeElem[x], style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,1],2), style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,2],2), style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,3],2), style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,4],2)), style = couleur[2]),
-                                             column(3,
-                                                    actionButton(preview$temp[x],"Hide settings preview"))
-                                           ),
-                                           plotOutput(plotname)  
-                                    ),
-                                    column(4,align = "center",
-                                           plotOutput(plotname2),
-                                           h4(paste0("regression: Y = ", round(currentProject()$regressionModel[[x]]$coefficients[1],3), " + X * ", round(currentProject()$regressionModel[[x]]$coefficients[2],3)))
-                                    )
-                                    
-                                )
-                              }
-                              else{
-                                taille <- 100
-                                couleur <- c("color:red","color:black")
-                                
-                                box(width = 12,background = NULL, height = taille,
-                                    column(8,
-                                           fluidRow(
-                                             column(1,
-                                                    h4(currentProject()$listeElem[x], style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,1],2), style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,2],2), style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,3],2), style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,4],2)), style = couleur[2]),
-                                             column(3,
-                                                    actionButton(preview$temp[x],"Regression settings preview"))
-                                           ) 
-                                    )
-                                    
-                                )
-                              }
-                            }
-                          }
-                        }
-                        else{
-                          if(tableauStat$temp[x,4] < 0.05){
-                            if(input$CorrectAll == T){
-                              if((previewAction$temp[x]%%2) ==1 ){
-                                taille <- 500
-                                couleur <- c("color:black","color:red")
-                                
-                                box(width = 12,background = NULL, height = taille,
-                                    column(8,
-                                           fluidRow(
-                                             column(1,
-                                                    h4(currentProject()$listeElem[x], style = couleur[2])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,1],2), style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,2],2), style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,3],2), style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,4],2)), style = couleur[2]),
-                                             column(3,
-                                                    actionButton(preview$temp[x],"Hide settings preview"))
-                                           ),
-                                           plotOutput(plotname)  
-                                    ),
-                                    column(4,align = "center",
-                                           plotOutput(plotname2),
-                                           h4(paste0("regression: Y = ", round(currentProject()$regressionModel[[x]]$coefficients[1],3), " + X * ", round(currentProject()$regressionModel[[x]]$coefficients[2],3)))
-                                    )
-                                    
-                                )
-                                
-                              }
-                              else{
-                                taille <- 100
-                                couleur <- c("color:black","color:red")
-                                
-                                box(width = 12,background = NULL, height = taille,
-                                    column(8,
-                                           fluidRow(
-                                             column(1,
-                                                    h4(currentProject()$listeElem[x], style = couleur[2])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,1],2), style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,2],2), style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,3],2), style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,4],2)), style = couleur[2]),
-                                             column(3,
-                                                    actionButton(preview$temp[x],"Regression settings preview"))
-                                           ) 
-                                    )
-                                    
-                                )
-                                
-                              }
-                            }
-                            else{
-                              if((previewAction$temp[x]%%2) ==1){
-                                taille <- 500
-                                couleur <- c("color:black","color:red")
-                                
-                                box(width = 12,background = NULL, height = taille,
-                                    column(8,
-                                           fluidRow(
-                                             column(1,
-                                                    h4(currentProject()$listeElem[x], style = couleur[2])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,1],2), style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,2],2), style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,3],2), style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,4],2)), style = couleur[2]),
-                                             column(3,
-                                                    actionButton(preview$temp[x],"Hide settings preview"))
-                                           ),
-                                           plotOutput(plotname)  
-                                    ),
-                                    column(4,align = "center",
-                                           plotOutput(plotname2),
-                                           h4(paste0("regression: Y = ", round(currentProject()$regressionModel[[x]]$coefficients[1],3), " + X * ", round(currentProject()$regressionModel[[x]]$coefficients[2],3)))
-                                    )
-                                    
-                                )
-                                
-                              }
-                              else{
-                                taille <- 100
-                                couleur <- c("color:black","color:red")
-                                
-                                box(width = 12,background = NULL, height = taille,
-                                    column(8,
-                                           fluidRow(
-                                             column(1,
-                                                    h4(currentProject()$listeElem[x], style = couleur[2])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,1],2), style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,2],2), style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,3],2), style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,4],2)), style = couleur[2]),
-                                             column(3,
-                                                    actionButton(preview$temp[x],"Regression settings preview"))
-                                           ) 
-                                    )
-                                    
-                                )
-                              }
-                            }
-                          }
-                          else{
-                            if(input$CorrectAll == T){
-                              if((previewAction$temp[x]%%2) ==1){
-                                taille <- 500
-                                couleur <- c("color:black","color:black")
-                                
-                                box(width = 12,background = NULL, height = taille,
-                                    column(8,
-                                           fluidRow(
-                                             column(1,
-                                                    h4(currentProject()$listeElem[x], style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,1],2), style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,2],2), style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,3],2), style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,4],2)), style = couleur[2]),
-                                             column(3,
-                                                    actionButton(preview$temp[x],"Hide settings preview"))
-                                           ),
-                                           plotOutput(plotname)  
-                                    ),
-                                    column(4, align = "center",
-                                           plotOutput(plotname2),
-                                           h4(paste0("regression: Y = ", round(currentProject()$regressionModel[[x]]$coefficients[1],3), " + X * ", round(currentProject()$regressionModel[[x]]$coefficients[2],3)))
-                                    )
-                                    
-                                )
-                              }
-                              else{
-                                taille <- 100
-                                couleur <- c("color:black","color:black")
-                                
-                                box(width = 12,background = NULL, height = taille,
-                                    column(8,
-                                           fluidRow(
-                                             column(1,
-                                                    h4(currentProject()$listeElem[x], style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,1],2), style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,2],2), style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,3],2), style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,4],2)), style = couleur[2]),
-                                             column(3,
-                                                    actionButton(preview$temp[x],"Regression settings preview"))
-                                           )
-                                    )
-                                    
-                                )
-                              }
-                            }
-                            else{
-                              if((previewAction$temp[x]%%2) ==1){  
-                                taille <- 500
-                                couleur <- c("color:black","color:black")
-                                
-                                box(width = 12,background = NULL, height = taille,
-                                    column(8,
-                                           fluidRow(
-                                             column(1,
-                                                    h4(currentProject()$listeElem[x], style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,1],2), style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,2],2), style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,3],2), style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,4],2)), style = couleur[2]),
-                                             column(3,
-                                                    actionButton(preview$temp[x],"Hide settings preview"))
-                                           ),
-                                           plotOutput(plotname)  
-                                    ),
-                                    column(4, align = "center",
-                                           plotOutput(plotname2),
-                                           h4(paste0("regression: Y = ", round(currentProject()$regressionModel[[x]]$coefficients[1],3), " + X * ", round(currentProject()$regressionModel[[x]]$coefficients[2],3)))
-                                    )
-                                    
-                                )
-                              }
-                              else{
-                                taille <- 100
-                                couleur <- c("color:black","color:black")
-                                
-                                box(width = 12,background = NULL, height = taille,
-                                    column(8,
-                                           fluidRow(
-                                             column(1,
-                                                    h4(currentProject()$listeElem[x], style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,1],2), style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,2],2), style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,3],2), style = couleur[1])),
-                                             column(1,
-                                                    h4(round(tableauStat$temp[x,4],2)), style = couleur[2]),
-                                             column(3,
-                                                    actionButton(preview$temp[x],"Regression settings preview"))
-                                           )
-                                    )
-                                    
-                                )
-                              }
-                            }
-                          }
-                        }
-                        
-                      }
-                      
-                    })
-                    
-                  })
-                }
-              }
-            } 
+            
+            }
           })       
           
           observe({
@@ -2616,28 +1762,6 @@ server <- function(input, output, session) {
               
             })
             
-          })
-          
-          observe({
-            if(is.null(input$validDrift)){}
-            else{
-              isolate({
-                if(input$validDrift > 0){
-                  
-                  for (i in 1: length(currentProject()$listeElem)){
-                    
-                    if(is.null(eval(parse(text = paste0("input$",NomNist$temp[i]))))){correction$val[i] <- FALSE}
-                    else(
-                      
-                      isolate(correction$val[i] <- eval(parse(text = paste0("input$",NomNist$temp[i]))))
-                      
-                      
-                    )
-                  }                  
-                }
-              })
-              
-            }
           })
           
           observe({
@@ -2664,7 +1788,13 @@ server <- function(input, output, session) {
           
           output$Text2 <- renderUI({NULL})#output$Text2
           
-          output$Text2Bis <- renderUI({NULL}) # output$Text2Bis
+          output$Text2_3 <- renderUI({NULL}) # output$Text2_3
+          
+          output$Text2_0 <- renderUI({NULL}) # output$Text2_3
+          
+          output$Text2_1 <- renderUI({NULL}) # output$Text2_3
+          
+          output$Text2_2 <- renderUI({NULL}) # output$Text2_3
           
         }
       })
@@ -2677,21 +1807,41 @@ server <- function(input, output, session) {
   machineCorrection <- reactiveValues(temp = list())
   observe({
     if((validCorrection$temp%%2) == 1){
+      
       lapply(1:length(currentProject()$samplesFiles), function(x){lapply(1:length(currentProject()$samples[[x]]$rep_data), function(t){currentProject()$samples[[x]]$rep_data[[t]]$setstandard(currentProject()$EtalonData)})})
       
-      lapply(1:length(currentProject()$listeElem), function(x){
-        if(is.na(tableauStat$temp[x,4])){
+      lapply(1:length(currentProject()$listeElem), function(x){  
+        if(currentProject()$nbCalib[x] == 0){
+          machineCorrection$temp[[x]] <- c(NA, NA)
+        }
+        if(currentProject()$nbCalib[x] == 1){
           machineCorrection$temp[[x]] <- c(currentProject()$SummaryNist[(nrow(currentProject()$SummaryNist)-1),x],0)
         }
-        else{
-          if(tableauStat$temp[x,4] < 0.05 & correction$val[x] == T){
-            machineCorrection$temp[[x]] <-  currentProject()$regressionModel[[x]]$coefficients[1:2]
+        if(currentProject()$nbCalib[x] == 2){
+          
+          if(eval(parse(text = paste0("input$",NomNist$temp[x]))) == T){
+            machineCorrection$temp[[x]] <-  currentProject()$regressionModel[[x]]
           }
           else{
             machineCorrection$temp[[x]] <- c(currentProject()$SummaryNist[(nrow(currentProject()$SummaryNist)-1),x],0)
           }
-          
         }
+        if(currentProject()$nbCalib[x] > 2){
+          
+          if(is.na(tableauStat$temp[x,4]) | is.null(eval(parse(text = paste0("input$",NomNist$temp[x]))))){
+            machineCorrection$temp[[x]] <- c(currentProject()$SummaryNist[(nrow(currentProject()$SummaryNist)-1),x],0)
+          }
+          else{
+            if(tableauStat$temp[x,4] < 0.05 & eval(parse(text = paste0("input$",NomNist$temp[x]))) == T){
+              machineCorrection$temp[[x]] <-  currentProject()$regressionModel[[x]]$coefficients[1:2]
+            }
+            else{
+              machineCorrection$temp[[x]] <- c(currentProject()$SummaryNist[(nrow(currentProject()$SummaryNist)-1),x],0)
+            }
+            
+          }
+        }
+
         
         
       })

@@ -453,7 +453,7 @@ elementR_project <- R6Class("elementR_project",
                               regressionModel = list(),
                               machineCorrection = NA,
                               errorSession = NA,
-                              nbCalib = list(), # pour chaque élement chimique combien de valeur non NULL dans les standards
+                              nbCalib = vector(), # pour chaque élement chimique combien de valeur non NULL dans les standards
                               
                               errorCheck = function(x, col){
                                                                   
@@ -546,16 +546,18 @@ elementR_project <- R6Class("elementR_project",
                                     else{F}
                                   })
                                   
-                                  self$nbCalib[[j]] <- length(which(tempoR == T))
+                                  self$nbCalib[j] <- length(which(tempoR == T))
                                   
-                                  if(self$nbCalib[[j]] == 0){
+                                  if(self$nbCalib[j] == 0){
                                     
                                     res_test <- NA 
                                     
                                     self$regressionModel[[j]] <- c(NA , NA)
                                     
                                   }
-                                  if(self$nbCalib[[j]] == 1){
+                                  if(self$nbCalib[j] == 1){
+                                    
+                                    res_test <- vector()
                                     
                                     tempNum <- which(sapply(1:length(Y), function(x){
                                       
@@ -576,7 +578,9 @@ elementR_project <- R6Class("elementR_project",
                                     self$regressionModel[[j]] <- c(intercept , slope)
                                     
                                   }
-                                  if(self$nbCalib[[j]] == 2){
+                                  if(self$nbCalib[j] == 2){
+                                    
+                                    res_test <- vector()
                                     
                                     tempNum <- which(sapply(1:length(Y), function(x){
                                       
@@ -598,7 +602,7 @@ elementR_project <- R6Class("elementR_project",
                                     self$regressionModel[[j]] <- c(intercept , slope)
                                     
                                   }
-                                  if(self$nbCalib[[j]] == 3){
+                                  if(self$nbCalib[j] == 3){
                                     
                                     if(length(which(Y != 1)) == 0){res_test <- NA}
                                     else{
@@ -620,7 +624,7 @@ elementR_project <- R6Class("elementR_project",
                                     }
                                     
                                   }
-                                  if(self$nbCalib[[j]] == 4){
+                                  if(self$nbCalib[j] > 3){
                                     
                                     if(length(which(Y != 1)) == 0){res_test <- NA}
                                     else{
@@ -646,11 +650,30 @@ elementR_project <- R6Class("elementR_project",
                                   tableau[j,] <- res_test
                                   
                                 }
-                                print(tableau)
                                 return(tableau)
                                 
                               },
                               
+                              setParam = function(tableauStat, previewAction, correction){
+                                
+                                color <- vector()
+                                
+                                for(i in 1:4){
+                                  if(!is.finite(tableauStat[i])){color[i] <- "color:black"}
+                                  else{
+                                    if(tableauStat[i] < 0.05){color[i] <- "color:red"}
+                                    else{color[i] <- "color:black"}
+                                  }
+                                }
+                                if((previewAction%%2) ==1){taille <- 500}
+                                else{taille <- 100}
+                                                                
+                                if(correction == T){corr <- T}
+                                else{corr <- F}
+                                
+                                return(c(taille,color, corr))
+                              },
+                                                            
                               initialize = function(folderPath=NULL) {   
                                 if(is.null(folderPath)) stop("\n #### A folder path is required to create an elementR project '[^_-]'")
                                 if(sum(c("calibrations","samples","settings")%in%dir(folderPath))!=3) stop("\n #### A folder should contain three subfolder 'calibrations', 'samples' and 'settings' to create an elementR project '[^_-]'")
