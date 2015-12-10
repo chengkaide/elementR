@@ -582,6 +582,8 @@ elementR_project <- R6Class("elementR_project",
                                     
                                     res_test <- vector()
                                     
+                                    print
+                                    
                                     tempNum <- which(sapply(1:length(Y), function(x){
                                       
                                       if(is.finite(Y[x])){T}
@@ -675,6 +677,7 @@ elementR_project <- R6Class("elementR_project",
                               },
                                                             
                               initialize = function(folderPath=NULL) {   
+                                
                                 if(is.null(folderPath)) stop("\n #### A folder path is required to create an elementR project '[^_-]'")
                                 if(sum(c("calibrations","samples","settings")%in%dir(folderPath))!=3) stop("\n #### A folder should contain three subfolder 'calibrations', 'samples' and 'settings' to create an elementR project '[^_-]'")
                                 self$folderPath <- folderPath
@@ -737,7 +740,8 @@ elementR_project <- R6Class("elementR_project",
                                 temp <- read.csv(paste0(folderPath,"/settings/Standard.csv"), sep = ";", dec = ".", h = T)
                                 self$EtalonData <- t(as.matrix(sapply(2: ncol(temp), function(x){as.numeric(as.character(temp[1,x]))})))
                                 colnames(self$EtalonData) <- colnames(temp)[2:length(colnames(temp))]     
-                                self$sessionSummary <- read.csv(paste0(folderPath,"/settings/Session summary.csv"), sep = ";", dec = ".", h = T)                      
+                                self$sessionSummary <- read.csv(paste0(folderPath,"/settings/Session summary.csv"), sep = ";", dec = ".", h = T)   
+                                
                                                                 
                                 #calibrations
                                 self$calibrationsPath <- paste0(folderPath,"/calibrations")
@@ -756,7 +760,7 @@ elementR_project <- R6Class("elementR_project",
                                 
                                 sampList <- lapply(paste0(self$samplesPath,"/",sampFiles),function(f){elementR_repSample$new(f, stand = self$EtalonData)})
                                 names(sampList) <- sampFiles
-                                self$samples <- sampList  
+                                self$samples <- sampList 
                                 
                                 # Flags
                                 self$flag_Calib <- rep(0, length(self$calibrationsFiles))
@@ -765,7 +769,7 @@ elementR_project <- R6Class("elementR_project",
                                 flagTemp <- lapply(1:length(self$samplesFiles), function(x){dir(paste0(folderPath,"/samples/",self$samplesFiles[x]))})
                                 self$flag_Sample <- lapply(1: length(flagTemp), function(x){ r <- rep(0, length(flagTemp[[x]])) ; names(r) <- flagTemp[[x]] ; r})                                
                                 
-#                                 self$greet()
+                                self$greet()
                               },#initialize
                               
                               greet = function() {
