@@ -1,0 +1,11 @@
+How to install elementR package
+
+1. Install and source "devtools" package from CRAN
+
+install.packages("devtools", dependencies = T)
+library(devtools)
+
+2. Install and source "elementR" package from GitHub
+
+install_github("charlottesirot/elementR", ref = "dashDy-Cha", force = T)
+library(elementR)
