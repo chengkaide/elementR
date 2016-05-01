@@ -1,0 +1,9 @@
+exportPattern("^[[:alpha:]]+")
+
+importFrom(R6, R6Class)
+importFrom(shinyjs, colourInput)
+importFrom(gnumeric, read.gnumeric.sheet)
+importFrom(abind, abind)
+importFrom(tcltk2, tk2text)
+importFrom(gdata, read.xls)
+import(shiny, shinydashboard, stringr, lmtest, reader, devtools, tcltk)
