@@ -7,5 +7,5 @@ library(devtools)
 
 2. Install and source "elementR" package from GitHub
 
-install_github("charlottesirot/elementR", ref = "dashDy-Cha", force = T)
+install_github("charlottesirot/elementR", ref = "dashDy-Cha", force = T, dependencies = T)
 library(elementR)
