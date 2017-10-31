@@ -2233,7 +2233,7 @@ runElementR <- function(){ # nocov start
 																						    bins = c(TempS$t, Temp0S$t), 
 																						    plat = c(Temp1S$t,Temp2S$t), 
 																						    name = input$SampleIn2, 
-																						    meanStand = currentProject()$standards[[1]]$rep_dataFinale[(nrow(currentProject()$standards[[1]]$rep_dataFinale)-1),], 
+																						    meanStand = currentProject()$standards[[1]]$rep_dataFinale, 
 																						    rankSample = currentProject()$sampleRank, 
 																						    rankStandard = currentProject()$standardRank,
 																						    model = currentProject()$regressionModel, 
@@ -2310,7 +2310,7 @@ runElementR <- function(){ # nocov start
 																									   bins = c(TempS$t, Temp0S$t), 
 																									   plat = c(Temp1S$t,Temp2S$t), 
 																									   name = input$SampleIn2, 
-																									   meanStand = currentProject()$standards[[1]]$rep_dataFinale[(nrow(currentProject()$standards[[1]]$rep_dataFinale)-1),], 
+																									   meanStand = currentProject()$standards[[1]]$rep_dataFinale, 
 																									   rankSample = currentProject()$sampleRank, 
 																									   rankStandard = currentProject()$standardRank,
 																									   model = currentProject()$regressionModel, 
@@ -2382,7 +2382,7 @@ runElementR <- function(){ # nocov start
 																									   bins = c(TempS$t, Temp0S$t), 
 																									   plat = c(Temp1S$t,Temp2S$t), 
 																									   name = input$SampleIn2,
-																									   meanStand = currentProject()$standards[[1]]$rep_dataFinale[(nrow(currentProject()$standards[[1]]$rep_dataFinale)-1),], 
+																									   meanStand = currentProject()$standards[[1]]$rep_dataFinale, 
 																									   rankSample = currentProject()$sampleRank, 
 																									   rankStandard = currentProject()$standardRank,
 																									   model = currentProject()$regressionModel, 
@@ -2451,7 +2451,7 @@ runElementR <- function(){ # nocov start
 																										   bins = c(TempS$t, Temp0S$t), 
 																										   plat = c(Temp1S$t,Temp2S$t), 
 																										   name = input$SampleIn2, 
-																										   meanStand = currentProject()$standards[[1]]$rep_dataFinale[(nrow(currentProject()$standards[[1]]$rep_dataFinale)-1),], 
+																										   meanStand = currentProject()$standards[[1]]$rep_dataFinale, 
 																										   rankSample = currentProject()$sampleRank, 
 																										   rankStandard = currentProject()$standardRank,
 																										   model = currentProject()$regressionModel, 
@@ -8690,25 +8690,15 @@ runElementR <- function(){ # nocov start
 										
 										meanStandTable <- currentProject()$standards[[1]]$rep_dataFinale
 										
-										print("meanStandTable")
-										print(meanStandTable)
-										
 										LineNumber <- nrow(currentProject()$standards[[1]]$rep_dataFinale)-1
 										
-										print("LineNumber")
-										print(LineNumber)
-										
-										
 										meanStand <- meanStandTable[LineNumber, ]
-										
-										print("meanStand")
-										print(meanStand)
 										
 										dataPlot2Sample$datS <- currentSampleRep$temp$getData(curve = input$CourbeSample, 
 																			bins = c(TempS$t, Temp0S$t), 
 																			plat = c(Temp1S$t,Temp2S$t), 
 																			name = input$SampleIn2, 
-																			meanStand = currentProject()$standards[[1]]$rep_dataFinale[(nrow(currentProject()$standards[[1]]$rep_dataFinale)-1),], 
+																			meanStand = currentProject()$standards[[1]]$rep_dataFinale,
 																			rankSample = currentProject()$sampleRank, 
 																			rankStandard = currentProject()$standardRank,
 																			model = currentProject()$regressionModel, 
